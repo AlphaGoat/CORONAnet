@@ -52,14 +52,12 @@ def multi_frame_parse_function(example_proto: tf.train.Example,
     :param return_filename: Flag to set to return filename with parsed proto features 
     :param resize_dims: Tuple of dimensions to resize serialized image to (height, width)
     :param target_labels: Either a string of a single target label name if only one target is 
-                          going to be used, a list/tuple of target label names, or a dictionary
-                          whose keys are the target label names and whose values are the 
-                          TensorFlow datatype to parse the feature as
-    :param label_transform: transforms to apply to labels values after they are parsed from 
-                            the protobuf. Can be a string if the same transform is going to 
-                            be applied to all labels, a list of transforms to apply to labels 
-                            in order, or a dictionary whose keys are the target label name and 
-                            whose values are the transforms to apply to that label
+     going to be used, a list/tuple of target label names, or a dictionary whose keys are the 
+     target label names and whose values are the TensorFlow datatype to parse the feature as
+    :param target_transforms:  transforms to apply to labels values after they are parsed from 
+     the protobuf. Can be a string if the same transform is going to  be applied to all labels, 
+     a list of transforms to apply to labels in order, or a dictionary whose keys are the target 
+     label name and whose values are the transforms to apply to that label
 
     :return image: tf.float32 input image
     :return target_tensor: tf.float32 tensor of target values
@@ -69,11 +67,9 @@ def multi_frame_parse_function(example_proto: tf.train.Example,
             "height": tf.io.FixedLenFeature((), dtype=tf.int64),
             "width": tf.io.FixedLenFeature((), dtype=tf.int64),
             "channels": tf.io.FixedLenFeature((), dtype=tf.int64),
-#            "peak_intensity": tf.io.FixedLenFeature((), dtype=tf.float32),
             "class_id": tf.io.FixedLenFeature((), dtype=tf.int64),
             "num_frames": tf.io.FixedLenFeature((), dtype=tf.int64),
             "sequence_raw": tf.io.FixedLenFeature((), dtype=tf.string),
-#            "filename": tf.io.VarLenFeatures(tf.string)
     }
 
     if isinstance(target_labels, dict):

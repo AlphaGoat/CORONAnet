@@ -1,3 +1,9 @@
+"""
+Utilties for writing serialized TF Record files for CORONAnet
+
+Author: Peter Thomas
+Date: 30 April 2022
+"""
 import os
 import csv
 import cv2
@@ -23,6 +29,7 @@ from SEPnet.math.partition_funcs import (
 )
 from SEPnet.dataset.data_generator import get_date_labels_by_minute
 
+from CORONAnet import TARGET_LABELS
 from CORONAnet.utils import ask_for_confirmation
 
 
@@ -74,6 +81,7 @@ def write_partition_to_tfrecord(cme_event_df: pd.DataFrame,
                                 partition_name: str,
                                 partition_path: str,
                                 image_shape: Tuple[int] or List[int]=None,
+                                target_labels: List[str]=['peak_intensity'],
                                 num_examples_per_tfrecord: int=4):
     """
     Write partition to tfrecord 
@@ -100,7 +108,14 @@ def write_partition_to_tfrecord(cme_event_df: pd.DataFrame,
                 sequence = sequences_array[num_examples_written]
                 cme_label = cme_event_df.iloc[num_examples_written]
 
-                example = serialize_sequence_data(sequence, cme_label, image_shape=image_shape)
+                # if the sequence is empty, continue to next example
+                if len(sequence) == 0:
+                    num_examples_written += 1
+                    continue
+
+                example = serialize_sequence_data(sequence, cme_label, 
+                                                  image_shape=image_shape,
+                                                  target_labels=target_labels)
 
                 writer.write(example.SerializeToString())
 
@@ -164,6 +179,7 @@ def prepare_10MeV_proton_event_dataframes(ten_mev_event_file,
     ten_mev_sep_events_df = pd.concat([ten_mev_sep_events_df, re2_sep_events_df])
 
     return ten_mev_sep_events_df, ten_mev_re2_events_df
+
 
 def partition_dataset(sep_correlated_cme_df,
                       non_sep_correlated_cme_df, 
@@ -616,6 +632,98 @@ def label_single_frame_data(corona_df,
     return corona_df
 
 
+def label_sequence_dir_data(
+    sequence_names: List[str],
+    cme_df: pd.DataFrame,
+    sep_events_df: pd.DataFrame,
+    elevated_proton_events_df: pd.DataFrame,
+    pred_targets: List[str]=['peak_intensity']
+):
+
+    # Get CDAW date associated to sequence from directory name
+    sequence_dates = list()
+    for seq_name in sequence_names:
+        date = datetime.strptime(seq_name, "%Y%m%d_%H%M%S")
+        sequence_dates.append(date)
+
+    # convert CME CDAW date column to datetime object
+    cme_df['cdaw_date'] = cme_df['cdaw_date'].map(
+        lambda t: datetime.strptime(t, "%Y-%m-%d %H:%M:%S") if  
+        isinstance(t, str) else t
+    )
+
+    # initalize an index column for the CME dataframe that contains 
+    # the index of the sequence date the CME is matched to
+    cme_df['sequence_index'] = -1
+
+    # match CME to sequence by CDAW date
+    for i, seq_date in enumerate(sequence_dates):
+
+        cme_df['sequence_index'].loc[cme_df[cme_df['cdaw_date'] == seq_date].index] = i
+
+    # if no sequence was matched to a CME row, remove it from dataframe
+    cme_df = cme_df[cme_df['sequence_index'] != -1]
+
+    # match proton events to CMEs 
+    sep_labels, sep_correlated_cme_df = correlate_cme_to_proton_event(
+        sep_events_df,
+        cme_df,
+        target_label=1,
+        pad_days=3,
+    )
+
+    # label SEP correlated CME df with target `1` so they can be distinguished 
+    # in the test dataframe 
+    sep_correlated_cme_df['target'] = 1
+
+    # filter out already matched cmes
+    keys = list(sep_correlated_cme_df.drop(['proton_event_start',
+        'proton_event_threshold_time', 'proton_event_peak_time'], 1).columns.values)
+    i1 = cme_df.set_index(keys).index
+    i2 = sep_correlated_cme_df.set_index(keys).index
+    cme_df = cme_df[~i1.isin(i2)]
+
+    elevated_proton_labels, elevated_proton_correlated_cme_df = correlate_cme_to_proton_event(
+        elevated_proton_events_df,
+        cme_df,
+        target_label=0,
+        pad_days=3,
+    )
+
+    # label proton elvated event correlated CME df with target `2` so they can be distinguished 
+    # in the test dataframe 
+    elevated_proton_correlated_cme_df['target'] = 2
+
+    # drop SEP correlated and non-SEP photon event correlated cme events from
+    # main dataframe
+    uncorrelated_cme_df = cme_df.drop(index=elevated_proton_correlated_cme_df.index)
+
+    # apply labels to dataframes
+    for target_label in pred_targets:
+        if target_label in ["start_time", "threshold_time", "peak_time"]:
+            sep_correlated_cme_df[target_label] = get_date_labels_by_minute(
+                sep_correlated_cme_df, sep_labels, label=target_label,
+            )
+            elevated_proton_correlated_cme_df[target_label] = get_date_labels_by_minute(
+                elevated_proton_correlated_cme_df, elevated_proton_labels, label=target_label,
+            )
+            uncorrelated_cme_df[target_label] = 5000.0
+
+        elif target_label == 'peak_intensity':
+            sep_proton_intensities = sep_labels[2::4]['Intensity']
+            sep_proton_intensities.index = sep_correlated_cme_df.index
+            sep_correlated_cme_df['peak_intensity'] = sep_proton_intensities
+
+            elevated_proton_intensities = elevated_proton_labels[2::4]['Intensity']
+            elevated_proton_intensities = elevated_proton_correlated_cme_df.index
+            elevated_proton_correlated_cme_df['peak_intensity'] = elevated_proton_intensities
+
+            uncorrelated_cme_df['peak_intensity'] = 10.0 / np.e**2
+
+    return (sequence_dates, sep_correlated_cme_df,
+            elevated_proton_correlated_cme_df, uncorrelated_cme_df)
+
+
 def label_multiframe_data(frame_paths,
                           cme_df,
                           sep_events_df,
@@ -645,18 +753,6 @@ def label_multiframe_data(frame_paths,
     image_data.sort(key=lambda d: d['date_of_capture'])
 
     image_sequences = list(to_batch(image_data, frames_per_sequence))
-
-    # construct dataframe for image data
-#    image_df = pd.DataFrame(
-#        [(path, date) for path, date in zip(frame_paths, dates_of_capture)],
-#        columns=["image_path", "date_of_capture"],
-#    )
-#
-#    # order frames by date
-#    image_df = image_df.sort_values(by=["date_of_capture"])
-#
-#    # group image paths by sequence
-#    image_sequences = image_df.groupby(np.arange(len(cme_df)) // frames_per_sequence)
 
     # link image sequences to CME events
     matched_cme_events, matched_sequences = associate_image_sequence_to_cme(image_sequences, cme_df)
@@ -742,7 +838,8 @@ def label_multiframe_data(frame_paths,
 def serialize_sequence_data(image_data_sequence: np.array,
                             data_label: pd.DataFrame,
                             image_shape: Tuple[int] or List[int]=None,
-                            make_images_grayscale: bool=True):
+                            make_images_grayscale: bool=True,
+                            target_labels=['peak_intensity']):
     """
     Serialize sequence data into tfrecord example 
     """
@@ -756,8 +853,9 @@ def serialize_sequence_data(image_data_sequence: np.array,
 
     # read images 
     image_list = list()
-    for image_data in image_data_sequence:
-        image_path = image_data['image_path']
+#    for image_data in image_data_sequence:
+    for image_path in image_data_sequence:
+#        image_path = image_data['image_path']
         image = cv2.imread(image_path)
         if make_images_grayscale:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -770,15 +868,13 @@ def serialize_sequence_data(image_data_sequence: np.array,
         'height': _int64_feature(image_height),
         'width': _int64_feature(image_width),
         'channels': _int64_feature(1 if make_images_grayscale else 3),
-        'peak_intensity': _float_feature(data_label['peak_intensity']),
-#        'start_time': _float_feature(data_label['start_time']),
-#        'threshold_time': _float_feature(data_label['threshold_time']),
-#        'peak_time': _float_feature(data_label['peak_time']),
         'class_id': _int64_feature(data_label['target'] + 1),
         'num_frames': _int64_feature(len(image_list)),
         'sequence_raw': _bytes_feature(image_stack.tostring()),
-
     }
+
+    for label in target_labels:
+        feature[label] = _float_feature(data_label[label])
 
     return tf.train.Example(features=tf.train.Features(feature=feature))
 
@@ -801,72 +897,157 @@ def serialize_data(image_path,
 
     return tf.train.Example(feature=tf.train.Features(feature=feature))
 
-if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser()
+def write_tfrecords_by_sequence_dir(
+        image_data_path: str,
+        output_path: str,
+        cme_data_path: str,
+        ten_mev_event_datafile: str,
+        ten_mev_re2_event_datafile: str,
+        train_partition: float=0.5,
+        valid_partition: float=0.2,
+        test_partition: float=0.3,
+        num_examples_per_tfrecord: int=8,
+):
+    """
+    Writes TF Records if the frames are already assigned to their corresponding CME 
+    by CDAW date (in this case, the date of the corresponding CDAW data will be the 
+    directory name for the sequence 
+    """
+    # ask if it's okay to remove output path
+    if os.path.exists(output_path):
+        if ask_for_confirmation(f"Warning: removing contents in {output_path}. Continue?"):
+            shutil.rmtree(output_path)
 
-    parser.add_argument('--image_data_path', type=str,
-                        required=True,
-                        help="Datapath for SOHO image data")
+    os.makedirs(output_path)
 
-#    parser.add_argument('--sep_datapath', type=str,
-#                        required=True,
-#                        help="Path for SEP data")
+    train_path = os.path.join(output_path, "train")
+    valid_path = os.path.join(output_path, "valid")
+    test_path = os.path.join(output_path, "test")
 
-    parser.add_argument('--cme_data_path', type=str,
-                        required=True,
-                        help="Path for CME data")
+    os.mkdir(train_path)
+    os.mkdir(valid_path)
+    os.mkdir(test_path)
 
-    parser.add_argument('--cme_source', type=str,
-                        default="DONKI-extended",
-                        help="Source for CME data. Possible options are:\n"
-                        + "\t1) DONKI\n"
-                        + "\t2) CDAW")
+    # Get all sub-directories in the root path
+    def _get_immediate_subdirectories(root_dir):
+        return [name for name in os.listdir(root_dir) if
+                os.path.isdir(os.path.join(root_dir, name))]
 
-    parser.add_argument('--ten_mev_event_datafile', type=str,
-                        help="Path for 10 MeV datafile")
+    sequence_directories = _get_immediate_subdirectories(image_data_path)
 
-    parser.add_argument('--ten_mev_re2_event_datafile', type=str,
-                        help="Path for 10 MeV re2 datafile")
+    # Parse function to check that we can convery a directory name to desired format
+    def _date_parse_check(dir_name):
+        try:
+            datetime.strptime(dir_name, "%Y%m%d_%H%M%S")
+            return True
+        except ValueError:
+            return False
 
-#    parser.add_argument('--corona_type', type=str,
-#                        required=True,
-#                        default='C3',
-#                        help="Coronagraph type to collect data for."
-#                        + "Options are: \n"
-#                        + "\t1) C2\n"
-#                        + "\t2) C3\n")
 
-    parser.add_argument('--train_partition', type=float,
-                        default=0.5,
-                        help="Fraction of data to use for training partition")
+    # ensure that all sequence directories can be interpreted as dates
+    sequence_directories = list(filter(_date_parse_check, sequence_directories))
 
-    parser.add_argument('--valid_partition', type=float,
-                        default=0.2,
-                        help="Fraction of data to use for validation partition")
+    # load cme dataframe 
+    cme_df = pd.read_csv(cme_data_path)
 
-    parser.add_argument('--test_partition', type=float,
-                        default=0.3,
-                        help="Fraction of data to use for test partition")
+    # drop repeat CDAW dates
+    cme_df.drop_duplicates(subset=['cdaw_date'], keep='first', inplace=True)
 
-    parser.add_argument('--pad_days', type=int,
-                        default=3,
-                        help="Number of days of padding to allow when associating CME to image frame")
+    # Get dataframes for proton events and split into SEP and elevated proton event
+    # dataframes
+    sep_events_df, elevated_proton_events_df = prepare_10MeV_proton_event_dataframes(
+        ten_mev_event_datafile, ten_mev_re2_event_datafile
+    )
 
-    parser.add_argument('--num_frames_per_sequence', type=int,
-                        default=15,
-                        help="Number of frames to use per coronagraph sequence")
+    # Label all sequences with proton intensity (when available)
+    (multi_frame_sequence, sep_correlated_cme_df,
+            elevated_proton_correlated_cme_df, uncorrelated_cme_df) = label_sequence_dir_data(
+        sequence_directories,
+        cme_df,
+        sep_events_df,
+        elevated_proton_events_df,
+        pred_targets=TARGET_LABELS,
+    )
 
-    parser.add_argument('--output_path', type=str,
-                        required=True,
-                        help="Output path for serialized tfrecords")
-    
-    parser.add_argument('--num_examples_per_tfrecord', type=int,
-                        default=8,
-                        help="Number of images to include in each tfrecord")
+    # divide data into train, valid, and test partitions
+    train_cme_df, valid_cme_df, test_cme_df = partition_dataset(
+        sep_correlated_cme_df,
+        elevated_proton_correlated_cme_df,
+        uncorrelated_cme_df,
+        partition_method='sep-balanced',
+        train_partition=train_partition,
+        valid_partition=valid_partition,
+        test_partition=test_partition,
+    )
 
-    flags = parser.parse_args()
+    multi_frame_sequence_array = np.array(multi_frame_sequence)
+    train_frame_sequence_dirs = multi_frame_sequence_array[train_cme_df['sequence_index']
+            .to_numpy(np.int32)].tolist()
+    valid_frame_sequence_dirs = multi_frame_sequence_array[valid_cme_df['sequence_index']
+            .to_numpy(np.int32)].tolist()
+    test_frame_sequence_dirs = multi_frame_sequence_array[test_cme_df['sequence_index']
+            .to_numpy(np.int32)].tolist()
 
+    # convert the datetime object sequence dirs back into strings
+    train_frame_sequence_dirs = list(map(lambda d: datetime.strftime(d, '%Y%m%d_%H%M%S'),
+                                     train_frame_sequence_dirs))
+    valid_frame_sequence_dirs = list(map(lambda d: datetime.strftime(d, '%Y%m%d_%H%M%S'),
+                                     valid_frame_sequence_dirs))
+    test_frame_sequence_dirs = list(map(lambda d: datetime.strftime(d, '%Y%m%d_%H%M%S'),
+                                     test_frame_sequence_dirs))
+
+    # Get paths to frames from sequence subdirectories
+    train_frame_sequence_paths = list()
+    for seq_dir in train_frame_sequence_dirs:
+        sequence = glob.glob(os.path.join(image_data_path, seq_dir, "*.png"))
+        train_frame_sequence_paths.append(sequence)
+
+    valid_frame_sequence_paths = list()
+    for seq_dir in valid_frame_sequence_dirs:
+        sequence = glob.glob(os.path.join(image_data_path, seq_dir, "*.png"))
+        valid_frame_sequence_paths.append(sequence)
+
+    test_frame_sequence_paths = list()
+    for seq_dir in test_frame_sequence_dirs:
+        sequence = glob.glob(os.path.join(image_data_path, seq_dir, "*.png"))
+        test_frame_sequence_paths.append(sequence)
+
+    # write partitions to disk
+    write_partition_to_tfrecord(
+        train_cme_df,
+        train_frame_sequence_paths,
+        "train",
+        train_path,
+        target_labels=TARGET_LABELS,
+        num_examples_per_tfrecord=num_examples_per_tfrecord,
+    )
+
+    write_partition_to_tfrecord(
+        valid_cme_df,
+        valid_frame_sequence_paths,
+        "valid",
+        valid_path,
+        target_labels=TARGET_LABELS,
+        num_examples_per_tfrecord=num_examples_per_tfrecord,
+    )
+
+    write_partition_to_tfrecord(
+        test_cme_df,
+        test_frame_sequence_paths,
+        "test",
+        test_path,
+        target_labels=TARGET_LABELS,
+        num_examples_per_tfrecord=num_examples_per_tfrecord,
+    )
+
+
+def write_tfrecords_by_n_frame_association():
+    """
+    Writes Tf Records if frames have not already been assigned to their corresponding 
+    CME. In this case, take the 'n' frames that precede the CME date as the associated 
+    sequence 
+    """
     # generate tfrecords
     output_path = flags.output_path
     
@@ -901,17 +1082,28 @@ if __name__ == '__main__':
     )
 
     # get labels for data
-    (multi_frame_sequences, sep_correlated_cme_df, 
-            elevated_proton_correlated_cme_df, uncorrelated_cme_df) = label_multiframe_data(
-        frame_paths,
-        cme_df,
-        sep_events_df,
-        elevated_proton_events_df,
-        cme_source=flags.cme_source,
-        frames_per_sequence=flags.num_frames_per_sequence,
-        pred_targets=["peak_intensity"],
-        pad_days=flags.pad_days,
-    )
+    if flags.associate_cme_to_n_frames:
+        (multi_frame_sequences, sep_correlated_cme_df, 
+                elevated_proton_correlated_cme_df, uncorrelated_cme_df) = label_multiframe_data(
+            frame_paths,
+            cme_df,
+            sep_events_df,
+            elevated_proton_events_df,
+            cme_source=flags.cme_source,
+            frames_per_sequence=flags.num_frames_per_sequence,
+            pred_targets=["peak_intensity"],
+            pad_days=flags.pad_days,
+        )
+    elif flags.associate_cme_to_sequence_directory:
+        (multi_frame_sequence, sep_correlated_cme_df,
+                elevated_proton_correlated_cme_df, uncorrelated_cme_df) = label_multiframe_data(
+            frame_paths,
+            cme_df,
+            sep_events_df,
+            elevated_proton_events_df,
+            cme_source=flags.cme_source,
+            pred_targets=["peak_intensity"],
+        )
 
     # save sequences to disk with associated DONKI timestamp
     if flags.save_sequences_to_disk:
@@ -968,3 +1160,104 @@ if __name__ == '__main__':
         test_path,
         num_examples_per_tfrecord=flags.num_examples_per_tfrecord,
     )
+
+
+def main(flags):
+    if flags.write_tfrecords_by_sequence_dir:
+        write_tfrecords_by_sequence_dir(
+            image_data_path=flags.image_data_path,
+            output_path=flags.output_path,
+            cme_data_path=flags.cme_data_path,
+            ten_mev_event_datafile=flags.ten_mev_event_datafile,
+            ten_mev_re2_event_datafile=flags.ten_mev_re2_event_datafile,
+            train_partition=flags.train_partition,
+            valid_partition=flags.valid_partition,
+            test_partition=flags.test_partition,
+            num_examples_per_tfrecord=flags.num_examples_per_tfrecord,
+        )
+
+    elif flags.write_tfrecords_by_n_frame_match:
+        write_tfrecords_by_n_frame_association()
+    else:
+        raise NotImplementedError("Method for generating Tensorflow Records not recognized")
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--image_data_path', type=str,
+                        required=True,
+                        help="Datapath for SOHO image data")
+
+    parser.add_argument('--cme_data_path', type=str,
+                        required=True,
+                        help="Path for CME data")
+
+    parser.add_argument('--cme_source', type=str,
+                        default="DONKI-extended",
+                        help="Source for CME data. Possible options are:\n"
+                        + "\t1) DONKI\n"
+                        + "\t2) CDAW")
+
+    parser.add_argument('--ten_mev_event_datafile', type=str,
+                        help="Path for 10 MeV datafile")
+
+    parser.add_argument('--ten_mev_re2_event_datafile', type=str,
+                        help="Path for 10 MeV re2 datafile")
+
+#    parser.add_argument('--corona_type', type=str,
+#                        required=True,
+#                        default='C3',
+#                        help="Coronagraph type to collect data for."
+#                        + "Options are: \n"
+#                        + "\t1) C2\n"
+#                        + "\t2) C3\n")
+
+    parser.add_argument('--train_partition', type=float,
+                        default=0.5,
+                        help="Fraction of data to use for training partition")
+
+    parser.add_argument('--valid_partition', type=float,
+                        default=0.2,
+                        help="Fraction of data to use for validation partition")
+
+    parser.add_argument('--test_partition', type=float,
+                        default=0.3,
+                        help="Fraction of data to use for test partition")
+
+    parser.add_argument('--pad_days', type=int,
+                        default=3,
+                        help="Number of days of padding to allow when associating CME to image frame")
+
+    parser.add_argument('--num_frames_per_sequence', type=int,
+                        default=15,
+                        help="Number of frames to use per coronagraph sequence")
+
+    parser.add_argument('--output_path', type=str,
+                        required=True,
+                        help="Output path for serialized tfrecords")
+    
+    parser.add_argument('--num_examples_per_tfrecord', type=int,
+                        default=8,
+                        help="Number of images to include in each tfrecord")
+
+    # mutually exclusive arguments governing how to generate tfrecords 
+    gen_method_group = parser.add_mutually_exclusive_group(required=True)
+
+    gen_method_group.add_argument('--write_tfrecords_by_sequence_dir', 
+                                  action='store_true',
+                                  default=False,
+                                  help="Flag to set to write TF Records for data that was collected "
+                                  + "already assigned to a CME event by directory name, where the "
+                                  + "directory name is the CDAW date of the associated CME")
+
+    gen_method_group.add_argument('--write_tfrecords_by_n_frame_association',
+                                  action='store_true',
+                                  default=False,
+                                  help="Write Tensorflow Records by association the n-frames that "
+                                  + "occur before a CME's CDAW date to that CME")
+
+    flags = parser.parse_args()
+
+    main(flags)

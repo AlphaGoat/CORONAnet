@@ -13,6 +13,7 @@ import tensorflow as tf
 from functools import partial
 from tensorflow.python.summary.summary_iterator import summary_iterator
 
+from CORONAnet import TARGET_LABELS
 from .plots import temporal_plot, loss_plot
 from .series_to_dataframes import temporal_series_from_logs, plots_from_logs
 
@@ -69,9 +70,9 @@ def read_logs(analysis_dir,
 
     analytics_plots_dict = dict()
     for plot in analytics_plots:
-        analytics_plots_dict[plot.name] = plot.get_values()
+        analytics_plots_dict[plot.name] = plot.values
 
-    return run_df, analytics_plots
+    return run_df, analytics_plots_dict
 
 
 def generate_plots(run_df, graphics_save_dir, plot_functions=[]):
@@ -93,7 +94,7 @@ def save_serialized_plots(run_df,
                           best_epoch_metric=None, 
                           higher_score_is_better=True):
     """
-    Save plots that were serialized in summaries. If best epoch metric is specified, 
+    Save plots that were serialized in summaries to disk. If best epoch metric is specified, 
     only save the plot for that epoch of training 
 
     :param run_df: Dataframe of saved values from summaries file 
@@ -116,10 +117,19 @@ def save_serialized_plots(run_df,
     for key in plot_keys:
         if key not in analytics_plots_dict:
             continue
-        import pdb; pdb.set_trace()
-        plot_array = analytics_plots_dict[key].iloc[best_epoch]
+        plot_array = analytics_plots_dict[key][best_epoch-1]
         pil_image = Image.fromarray(plot_array)
         pil_image.save(os.path.join(graphics_save_dir, key + ".png"))
+
+        # Create a video of validation plots
+        plot_frames = list()
+        for i in range(len(analytics_plots_dict[key])):
+            image_array = analytics_plots_dict[key][i]
+            image_array = Image.fromarray(image_array)
+            plot_frames.append(image_array)
+        movie_save_path = os.path.join(graphics_save_dir, key + "_movie.gif") 
+        plot_frames[0].save(movie_save_path, format='GIF', append_images=plot_frames[1:],
+                save_all=True, duration=300, loop=0)
 
 
 def run_analysis(analysis_dir):
@@ -134,12 +144,20 @@ def run_analysis(analysis_dir):
         lambda x: temporal_series_from_logs(x, "false_positives"),
         lambda x: temporal_series_from_logs(x, "true_negatives"),
         lambda x: temporal_series_from_logs(x," false_negatives"),
-        lambda x: temporal_series_from_logs(x, "mean-absolute-error"),
         lambda x: temporal_series_from_logs(x, "loss/total_loss"),
         lambda x: temporal_series_from_logs(x, "valid_loss/total_loss"),
     ]
 
-    plots_functions = [lambda x: plots_from_logs(x, "prediction_plot")]
+    plots_functions = list()
+    for label in TARGET_LABELS:
+        series_functions.extend([
+            lambda x: temporal_series_from_logs(x, label + " (SEP) mean absolute error"),
+            lambda x: temporal_series_from_logs(x, label + " (Elevated) mean absolute error"),
+            lambda x: temporal_series_from_logs(x, label + " (Combined) mean absolute error"),
+            lambda x: temporal_series_from_logs(x, label + " Pearson Coefficient (SEP)"),
+            lambda x: temporal_series_from_logs(x, label + " Pearson Coefficient (Non-Constant)"),
+        ])
+        plots_functions.append(lambda x: plots_from_logs(x, label + "_prediction_plot"))
 
     run_df, run_plots_dict = read_logs(analysis_dir, series_functions=series_functions,
                                        plots_functions=plots_functions)
@@ -198,19 +216,52 @@ def run_analysis(analysis_dir):
             "name": "true_negatives_plot"
 
         },
-        {
-            "function": lambda x: temporal_plot(x, "mean_absolute_error", "Mean Absolute Error"),
-            "name": "mean_absolute_error_plot"
-        }
     ]
+
+    for label in TARGET_LABELS:
+        label_format = ' '.join(list(map(lambda s: s[0].upper() + s[1:], label.split('_'))))
+        plot_functions.extend([
+            {
+                "function": lambda x: temporal_plot(x, label + " (SEP) mean absolute error",
+                    title=label_format + " (SEP) Mean Absolute Error"),
+                "name": label + "_sep_mean_absolute_error"
+            },
+            {
+                "function": lambda x: temporal_plot(x, label + " (Elevated) mean absolute error",
+                    title=label_format + " (Elevated) Mean Absolute Error"),
+                "name": label + "_elevated_mean_absolute_error"
+            },
+            {
+                "function": lambda x: temporal_plot(x, label + " (Combined) mean absolute error",
+                    title=label_format + " (Combined) Mean Absolute Error"),
+                "name": label + "_combined_mean_absolute_error"
+            },
+            {
+                "function": lambda x: temporal_plot(x, label + " Pearson Coefficient (SEP)",
+                    title=label_format + " (SEP) Pearson Coefficient"),
+                "name": label + "_sep_pearson_coefficient"
+            },
+            {
+                "function": lambda x: temporal_plot(x, label + " Pearson Coefficient (Non-Constant)",
+                    title=label_format + " (Non-Constant) Pearson Coefficient"),
+                "name": label + "_non_constant_pearson_coefficient"
+            }
+        ])
 
     # generate plots from scalars and save in graphics save directory
     generate_plots(run_df, graphics_save_dir, plot_functions)
 
     # Now save plots that are serialized in the run dataframe (either generating all plots 
     # or generating plots for best epoch)
-    save_serialized_plots(run_df, run_plots_dict, 
-                          graphics_save_dir, ["predictions_plot"], "f1_score")
+    plot_keys = list()
+    for label in TARGET_LABELS:
+        plot_keys.append(label + "_prediction_plot")
+    save_serialized_plots(run_df, 
+                          run_plots_dict, 
+                          graphics_save_dir, 
+                          plot_keys, 
+                          "valid-loss/total_loss",
+                          higher_score_is_better=False)
 
 
 def main_cli(flags):

@@ -78,3 +78,13 @@ class Logger():
             tf.summary.scalar(key, value, step=step)
         self.writer.flush()
         logger.info("%s: %f", key, value)
+
+    def close(self):
+        """
+        Close TensorFlow summaries after writing values
+        """
+        try:
+            self.writer.close()
+        except RuntimeError as e:
+            logger.info(e)
+            pass

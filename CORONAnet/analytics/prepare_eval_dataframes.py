@@ -92,11 +92,11 @@ def compute_classification_df(
     class_table_data["false_positives"] = [false_positives]
     class_table_data["true_negatives"] = [true_negatives]
     class_table_data["false_negatives"] = [false_negatives]
-    class_table_data["precision"] = [precision],
-    class_table_data["recall"] = [recall],
-    class_table_data["tss"] = [tss],
-    class_table_data["f1"] = [f1],
-    class_table_data["hss"] = [hss],
+    class_table_data["precision"] = [precision]
+    class_table_data["recall"] = [recall]
+    class_table_data["tss"] = [tss]
+    class_table_data["f1"] = [f1]
+    class_table_data["hss"] = [hss]
 
     class_table_df = pd.DataFrame.from_dict(class_table_data)
 
@@ -170,10 +170,10 @@ def compute_regression_df(
         r_elevated = pearson_coefficient(all_elevated_true, all_elevated_pred)
 
         # Generate table with regression statistics
-        regression_table_data[f"{label} (SEP) mean absolute error"] = [sep_mae],
-        regression_table_data[f"{label} (SEP) stddev absolute error"] = [sep_stddev],
-        regression_table_data[f"{label} (Elevated) mean absolute error"] = [elevated_mae],
-        regression_table_data[f"{label} (Elevated) stddev absolute error"] = [elevated_stddev],
+        regression_table_data[f"{label} (SEP) mean absolute error"] = [sep_mae]
+        regression_table_data[f"{label} (SEP) stddev absolute error"] = [sep_stddev]
+        regression_table_data[f"{label} (Elevated) mean absolute error"] = [elevated_mae]
+        regression_table_data[f"{label} (Elevated) stddev absolute error"] = [elevated_stddev]
         regression_table_data[f"{label} (non-Elevated) mean absolute error"] = [non_elevated_mae]
         regression_table_data[f"{label} (non-Elevated) stddev absolute error"] = [non_elevated_stddev]
         regression_table_data[f"{label} (Combined) mean absolute error"] = [combined_mae]

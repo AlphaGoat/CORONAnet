@@ -35,6 +35,8 @@ from CORONAnet.analytics.plots import prediction_plot_handler
 from CORONAnet.dataset.DatasetGenerator import DatasetGenerator
 from CORONAnet.dataset.parse_functions import get_parse_function
 
+logging.basicConfig(level=logging.INFO)
+
 IMAGE_SHAPE = (512, 512, 1)
 
 
@@ -223,11 +225,11 @@ def train(
                                      "valid_loss/autoencoder_loss", epoch)
 
         metrics_to_monitor = dict()
-        metrics_to_monitor["F1 Score"] = classification_df['f1'].iloc[0][0]
-        metrics_to_monitor["precision"] = classification_df['precision'].iloc[0][0]
-        metrics_to_monitor["recall"] = classification_df['recall'].iloc[0][0]
-        metrics_to_monitor['TSS'] = classification_df['tss'].iloc[0][0]
-        metrics_to_monitor['HSS'] = classification_df['hss'].iloc[0][0]
+        metrics_to_monitor["F1 Score"] = classification_df['f1'].iloc[0]
+        metrics_to_monitor["precision"] = classification_df['precision'].iloc[0]
+        metrics_to_monitor["recall"] = classification_df['recall'].iloc[0]
+        metrics_to_monitor['TSS'] = classification_df['tss'].iloc[0]
+        metrics_to_monitor['HSS'] = classification_df['hss'].iloc[0]
 
         for label in target_labels:
             metrics_to_monitor[f'{label} mae'] = regression_df[f'{label} (SEP) mean absolute error'].iloc[0][0]
@@ -290,7 +292,7 @@ def main_cli(flags: TrainConfig):
         target_transforms="log-transform",
     )
 
-    # initialize oversampled training data generator 
+    # initialize oversampled training data generator (for second stage of training)
     oversampled_train_data_generator = DatasetGenerator(
         flags.train_tfrecords_path,
         parse_function=get_parse_function(flags.parse_function, flags.return_filename),
