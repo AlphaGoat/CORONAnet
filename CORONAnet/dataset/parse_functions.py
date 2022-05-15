@@ -134,12 +134,11 @@ def multi_frame_parse_function(example_proto: tf.train.Example,
     return image_sequence, target_tensor
 
 
-def get_parse_function(parse_descriptor, return_filename=False):
+def get_parse_function(parse_descriptor):
 
-    if parse_descriptor == "multi_frame_parse":
-        return partial(multi_frame_parse_function, return_filename=return_filename,
-                       resize_dims=(128, 128))
-    elif parse_descriptor == 'single_frame_parse':
-        return partial(single_frame_parse_function, return_filename=return_filename)
+    if parse_descriptor.lower() == "multi_frame_parse":
+        return multi_frame_parse_function
+    elif parse_descriptor.lower() == 'single_frame_parse':
+        return single_frame_parse_function
     else:
         raise NotImplementedError(f"{parse_descriptor} not implemented.")
