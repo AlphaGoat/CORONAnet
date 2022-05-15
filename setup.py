@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 setup(
@@ -8,7 +8,7 @@ setup(
     + "of CME events using coronagraph frames as input",
     author="Peter Thomas",
     author_email="pthomas2019@my.fit.edu",
-    packages=['CORONAnet'],
+    packages=find_packages(),
     install_required=[
         "numpy",
         "pandas"
