@@ -52,9 +52,8 @@ class DatasetGenerator():
         if type(tfrecord_path) == list:
             self.tfrecord_path = tfrecord_path
         elif os.path.isdir(tfrecord_path):
-            os.chdir(tfrecord_path)
-            for file in glob.glob("*.tfrecord"):
-                self.tfrecord_path.append(os.path.join(tfrecord_path, file))
+            for filepath in glob.glob(os.path.join(tfrecord_path, "*.tfrecord")):
+                self.tfrecord_path.append(filepath)
         else:
             self.tfrecord_path.append(tfrecord_path)
 
