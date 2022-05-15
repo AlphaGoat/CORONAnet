@@ -149,7 +149,6 @@ def train(
             logger.write_data_to_log(epoch_train_autoencoder_loss / count,
                                      "loss/autoencoder_loss", step=epoch)
 
-https://github.com/AlphaGoat/CORONAnet
         if use_autoencoder:
             print("\n\ntrain_regression_loss: {:7.2f}, ".format(epoch_train_regression_loss / count)
                 + "train_autoencoder_loss: {:7.2f}, ".format(epoch_train_autoencoder_loss / count)
