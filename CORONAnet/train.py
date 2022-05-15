@@ -57,9 +57,6 @@ def train(
     elevated_intensity_threshold: float=10.0 / np.e**2,
     target_transforms: str or List[str] or Dict[str, str]="log-transform",
     target_labels: List[str]=["peak_intensity"],
-    #          warmup_steps=5,
-    #          initial_learning_rate=1e-3,
-    #          final_learning_rate=1e-4,
     num_train_epochs: int=100):
     """
     Main train function for CORONAnet 
