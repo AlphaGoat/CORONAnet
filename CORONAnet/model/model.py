@@ -186,7 +186,10 @@ def add_recurrent_regression_head(feature_extractor, num_outputs=1,
     Add LSTM module and regression head to base feature extractor 
     """
     # Add temporal dimension to input
-    temporal_input = Input(shape=(None, *input_shape), name="temporal_input")
+    temporal_input = Input(
+        shape=(None, *input_shape), 
+        name="temporal_input"
+    )
 
     # distribute feature extractor across entire sequence
     feature_extractor_outputs = list()

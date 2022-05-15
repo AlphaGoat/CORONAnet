@@ -4,6 +4,43 @@ from typing import List, Tuple, Dict
 from CORONAnet.math import apply_transform
 
 
+def pad_or_shorten_sequence(
+    image_sequence, 
+    max_len=20,
+):
+    """
+    If the input image sequence is shorter than the max length,
+    pad to max length. Else, remove equal numbers of frames
+    from beginning and end of sequence until we have max_len
+    frames
+    """
+    # Get dimensions of image sequence
+    sequence_shape = tf.shape(image_sequence)
+    num_frames = sequence_shape[0]
+    image_height = sequence_shape[1]
+    image_width = sequence_shape[2]
+    num_channels = sequence_shape[3]
+
+    # pad image sequence to max length if sequence is less than this length, else 
+    num_to_pad = max_len - num_frames
+
+    def _pad():
+        pad_frames = tf.zeros((num_to_pad, image_height, image_width, num_channels), tf.float32)
+        pad_image_sequence = tf.concat([image_sequence, pad_frames], axis=0)
+        return pad_image_sequence
+
+
+    def _cut():
+        num_from_back = tf.math.floordiv(tf.abs(num_to_pad), 2)
+        num_from_front = tf.abs(num_to_pad) - num_from_back
+        cut_image_sequence = image_sequence[num_from_front:-num_from_back, ...]
+        return cut_image_sequence
+
+    image_sequence = tf.cond(tf.greater_equal(num_to_pad, 0), _pad, _cut)
+
+    return image_sequence
+    
+
 def single_frame_parse_function(example_proto, return_filename=False):
     """
     Parse example proto from tfrecord 
@@ -41,10 +78,10 @@ def single_frame_parse_function(example_proto, return_filename=False):
 
 
 def multi_frame_parse_function(example_proto: tf.train.Example, 
-                               return_filename: bool=False, 
                                resize_dims: Tuple[int] or List[int]=None,
                                target_labels: str or Tuple[str] or List[str] or Dict[str, tf.dtype]=[], 
-                               target_transforms: str or Dict[str, str] or List[str]=None):
+                               target_transforms: str or Dict[str, str] or List[str]=None,
+                               max_len_sequence: int=20):
     """
     Parse multi-frame example proto from tfrecord 
 
@@ -99,12 +136,23 @@ def multi_frame_parse_function(example_proto: tf.train.Example,
     image_sequence = tf.reshape(image_sequence, [num_frames, height, width, num_channels])
     image_sequence = tf.cast(image_sequence, tf.float32)
 
+
     if resize_dims is not None:
         image_sequence = tf.map_fn(
             lambda image: tf.image.resize(image, (resize_dims[0], resize_dims[1])),
             image_sequence,
         )
+        image_height = resize_dims[0]
+        image_width = resize_dims[1]
 
+    image_sequence = pad_or_shorten_sequence(image_sequence, max_len=max_len_sequence)
+
+    # initialize mask for padded mask so that we can remove them during training
+    # TODO: Find out how to use training model with ragged tensor (with > 1 batch size!)
+#    sequence_mask = tf.concat([tf.ones(num_frames), tf.zeros(num_to_pad)], axis=0)
+#    sequence_mask = tf.cast(sequence_mask, tf.bool)
+
+    # Wrapper for transform functions
     def _transform_wrapper(val, label, i=0):
         if target_transforms is None:
             return val
@@ -117,6 +165,7 @@ def multi_frame_parse_function(example_proto: tf.train.Example,
         else:
             raise ValueError(f"label_transform is an unrecognized type {type(target_transforms)}")
 
+    # apply transforms to target labels
     label_values = list()
     if isinstance(target_labels, dict):
         for i, label in enumerate(target_labels.keys()):

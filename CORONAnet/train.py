@@ -228,7 +228,7 @@ def train(
         metrics_to_monitor['HSS'] = classification_df['hss'].iloc[0]
 
         for label in target_labels:
-            metrics_to_monitor[f'{label} mae'] = regression_df[f'{label} (SEP) mean absolute error'].iloc[0][0]
+            metrics_to_monitor[f'{label} mae'] = regression_df[f'{label} (SEP) mean absolute error'].iloc[0]
 
         if use_autoencoder:
             print("\n\nval_regression_loss: {:7.2f}, val_autoencoder_loss: {:7.2f}, total_val_loss:{:7.2f}".
@@ -280,26 +280,11 @@ def main_cli(flags: TrainConfig):
     # initialize training data generator
     train_data_generator = DatasetGenerator(
         flags.train_tfrecords_path,
-        parse_function=get_parse_function(flags.parse_function, flags.return_filename),
+        parse_function=get_parse_function(flags.parse_function),
         image_shape=image_shape,
         batch_size=flags.batch_size,
+        max_len_sequence=flags.max_len_sequence,
         buffer_size=flags.buffer_size,
-        target_labels=["peak_intensity"],
-        target_transforms="log-transform",
-    )
-
-    # initialize oversampled training data generator (for second stage of training)
-    oversampled_train_data_generator = DatasetGenerator(
-        flags.train_tfrecords_path,
-        parse_function=get_parse_function(flags.parse_function, flags.return_filename),
-        image_shape=image_shape,
-        batch_size=flags.batch_size,
-        buffer_size=flags.buffer_size,
-        oversampling_technique=flags.oversampling_technique,
-        oversampled_distribution=[
-            flags.sep_oversampling_rate,
-            1. - flags.sep_oversampling_rate
-        ] if flags.sep_oversampling_rate else None,
         target_labels=["peak_intensity"],
         target_transforms="log-transform",
     )
@@ -307,9 +292,10 @@ def main_cli(flags: TrainConfig):
     # initialize validation data generator
     valid_data_generator = DatasetGenerator(
         flags.valid_tfrecords_path,
-        parse_function=get_parse_function(flags.parse_function, flags.return_filename),
+        parse_function=get_parse_function(flags.parse_function),
         image_shape=image_shape,
         batch_size=flags.batch_size,
+        max_len_sequence=flags.max_len_sequence,
         buffer_size=flags.buffer_size,
         target_labels=["peak_intensity"],
         target_transforms="log-transform",
@@ -352,6 +338,24 @@ def main_cli(flags: TrainConfig):
     # and reinitializing weights in regression head
     freeze_feature_extractor(model)
     reset_regression_head_weights(model)
+
+    # initialize oversampled training data generator (for second stage of training)
+    oversampled_train_data_generator = DatasetGenerator(
+        flags.train_tfrecords_path,
+        parse_function=get_parse_function(flags.parse_function),
+        image_shape=image_shape,
+        batch_size=flags.batch_size,
+        max_len_sequence=flags.max_len_sequence,
+        buffer_size=flags.buffer_size,
+        oversampling_technique=flags.oversampling_technique,
+        oversampled_distribution=[
+            flags.sep_oversampling_rate,
+            1. - flags.sep_oversampling_rate
+        ] if flags.sep_oversampling_rate else None,
+        target_labels=["peak_intensity"],
+        target_transforms="log-transform",
+    )
+
 
     # begin second stage of model training
     train(

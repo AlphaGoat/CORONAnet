@@ -21,6 +21,7 @@ class DatasetGenerator():
                  image_shape: Tuple[int, int, int] or List[int],
                  batch_size: int=32,
                  buffer_size: int=32,
+                 max_len_sequence: int=20,
                  return_filename: bool=False,
                  oversampling_technique: str=None,
                  target_labels: List[str]=["peak_intensity"],
@@ -65,6 +66,7 @@ class DatasetGenerator():
         self.target_labels = target_labels
         self.parse_function = partial(parse_function, 
                                       resize_dims=image_shape,
+                                      max_len_sequence=max_len_sequence,
                                       target_labels=target_labels)
 
         # target transform to apply to each label
@@ -192,7 +194,7 @@ class DatasetGenerator():
             # after applying this function. We don't want that, so this is a stupid wrapper
             # to remove the first return val after the rejection_resampler is applied
             def _toss_first_val(first_val, args):
-                return args[0], args[1]
+                return args[0], args[1], args[2]
 
             return dataset.map(_toss_first_val)
 

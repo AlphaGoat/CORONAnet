@@ -45,6 +45,9 @@ class TrainConfig:
     # Data batch size to use for training 
     batch_size: int = 1
 
+    # Maximum length of input image sequence
+    max_len_sequence: int = 10
+
     # Factor to downsample images by (to nearest power of 2)
     downsample_factor: int = 1
 
