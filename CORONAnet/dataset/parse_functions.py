@@ -14,7 +14,6 @@ def pad_or_shorten_sequence(
     from beginning and end of sequence until we have max_len
     frames
     """
-    tf.print("image_sequence before pad function: ", tf.shape(image_sequence))
     # Get dimensions of image sequence
     sequence_shape = tf.shape(image_sequence)
     num_frames = sequence_shape[0]
@@ -24,9 +23,6 @@ def pad_or_shorten_sequence(
 
     # pad image sequence to max length if sequence is less than this length, else 
     num_to_pad = max_len - num_frames
-    tf.print("num_frames: ", num_frames)
-    tf.print("max-len: ", max_len)
-    tf.print("num_to_pad: ", num_to_pad)
 
     def _pad():
         pad_frames = tf.zeros((num_to_pad, image_height, image_width, num_channels), tf.float32)
@@ -41,7 +37,6 @@ def pad_or_shorten_sequence(
         return cut_image_sequence
 
     image_sequence = tf.cond(tf.greater_equal(num_to_pad, 0), _pad, _cut)
-    tf.print("image_sequence in pad function: ", tf.shape(image_sequence))
 
     return image_sequence
     
