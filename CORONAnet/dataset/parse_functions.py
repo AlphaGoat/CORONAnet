@@ -35,8 +35,8 @@ def pad_or_shorten_sequence(
 
 
     def _cut():
-        num_from_back = tf.math.floordiv(tf.abs(num_to_pad), 2)
-        num_from_front = tf.abs(num_to_pad) - num_from_back
+        num_from_front = tf.math.division(tf.abs(num_to_pad), 2)
+        num_from_back = tf.abs(num_to_pad) - num_from_front
         cut_image_sequence = image_sequence[num_from_front:-num_from_back, ...]
         return cut_image_sequence
 
