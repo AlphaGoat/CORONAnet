@@ -851,6 +851,9 @@ def serialize_sequence_data(image_data_sequence: np.array,
         image_height = 512
         image_width = 512
 
+    if len(image_data_sequence) == 0:
+        import pdb; pdb.set_trace()
+
     # read images 
     image_list = list()
 #    for image_data in image_data_sequence:
@@ -947,6 +950,11 @@ def write_tfrecords_by_sequence_dir(
 
     # ensure that all sequence directories can be interpreted as dates
     sequence_directories = list(filter(_date_parse_check, sequence_directories))
+
+    # Check to see if all sequence directories actually have frames in them. If not,
+    # remove
+    sequence_directories = list(filter(lambda d: len(glob.glob(os.path.join(
+        image_data_path, d, "*.png"))) > 0, sequence_directories))
 
     # load cme dataframe 
     cme_df = pd.read_csv(cme_data_path)
