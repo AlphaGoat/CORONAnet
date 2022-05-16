@@ -179,6 +179,7 @@ def multi_frame_parse_function(example_proto: tf.train.Example,
             label_values.append(label_val)
 
     target_tensor = tf.stack(label_values, axis=-1)
+    tf.print("image_sequence: ", tf.shape(image_sequence))
 
     return image_sequence, target_tensor
 
