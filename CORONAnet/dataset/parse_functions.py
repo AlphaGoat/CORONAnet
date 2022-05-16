@@ -23,6 +23,7 @@ def pad_or_shorten_sequence(
 
     # pad image sequence to max length if sequence is less than this length, else 
     num_to_pad = max_len - num_frames
+    tf.print("num_to_pad: ", num_to_pad)
 
     def _pad():
         pad_frames = tf.zeros((num_to_pad, image_height, image_width, num_channels), tf.float32)
@@ -37,6 +38,7 @@ def pad_or_shorten_sequence(
         return cut_image_sequence
 
     image_sequence = tf.cond(tf.greater_equal(num_to_pad, 0), _pad, _cut)
+    tf.print("image_sequence in pad function: ", tf.shape(image_sequence))
 
     return image_sequence
     
@@ -136,7 +138,6 @@ def multi_frame_parse_function(example_proto: tf.train.Example,
     image_sequence = tf.reshape(image_sequence, [num_frames, height, width, num_channels])
     image_sequence = tf.cast(image_sequence, tf.float32)
 
-
     if resize_dims is not None:
         image_sequence = tf.map_fn(
             lambda image: tf.image.resize(image, (resize_dims[0], resize_dims[1])),
@@ -179,7 +180,6 @@ def multi_frame_parse_function(example_proto: tf.train.Example,
             label_values.append(label_val)
 
     target_tensor = tf.stack(label_values, axis=-1)
-    tf.print("image_sequence: ", tf.shape(image_sequence))
 
     return image_sequence, target_tensor
 

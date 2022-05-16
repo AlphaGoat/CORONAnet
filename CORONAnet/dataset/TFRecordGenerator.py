@@ -867,6 +867,9 @@ def serialize_sequence_data(image_data_sequence: np.array,
 
     image_stack = np.stack(image_list, axis=0)
 
+    # Get the date of this sequence from directory path
+    sequence_date = os.path.basename(os.path.dirname(image_data_sequence[0]))
+
     feature = {
         'height': _int64_feature(image_height),
         'width': _int64_feature(image_width),
@@ -874,6 +877,7 @@ def serialize_sequence_data(image_data_sequence: np.array,
         'class_id': _int64_feature(data_label['target'] + 1),
         'num_frames': _int64_feature(len(image_list)),
         'sequence_raw': _bytes_feature(image_stack.tostring()),
+        'sequence_date': _bytes_feature(sequence_date),
     }
 
     for label in target_labels:
