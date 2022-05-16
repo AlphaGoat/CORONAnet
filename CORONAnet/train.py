@@ -116,9 +116,6 @@ def train(
         # begin training loop
         for step, (images, targets) in enumerate(train_dataset):
 
-            print("images: ", images)
-            tf.print("images: ", tf.shape(images))
-
             with tf.GradientTape() as tape:
                 pred_results = model(images, training=True)
 
