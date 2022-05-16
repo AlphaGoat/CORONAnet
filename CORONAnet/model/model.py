@@ -21,7 +21,7 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Model
 from CORONAnet.utils import reset_layer_weights
-from CORONAnet.model.activation import LeakyReLU
+from CORONAnet.model.activations import LeakyReLU
 
 
 def VGG16(input_shape):
