@@ -176,10 +176,7 @@ def train(
             epoch_val_regression_loss += val_regression_loss 
             epoch_val_total_loss += total_val_loss
 
-            print("preds: ", val_preds.numpy().shape)
-            print("targets: ", targets.numpy().shape)
-
-            epoch_val_preds.append(val_preds[0].numpy())
+            epoch_val_preds.append(val_preds.numpy())
             epoch_val_targets.append(targets.numpy())
 
         epoch_val_preds = np.concatenate(epoch_val_preds)
