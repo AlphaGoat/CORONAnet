@@ -21,6 +21,7 @@ from tensorflow.keras.layers import (
 )
 from tensorflow.keras.models import Model
 from CORONAnet.utils import reset_layer_weights
+from CORONAnet.model.activation import LeakyReLU
 
 
 def VGG16(input_shape):
@@ -29,55 +30,55 @@ def VGG16(input_shape):
     visible = Input(shape=input_shape, name='input')
 
     # 1st-block
-    conv1_1 = Conv2D(64, kernel_size=3, activation='relu', padding='same', name='conv1_1')(visible)
+    conv1_1 = Conv2D(64, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name='conv1_1')(visible)
     conv1_1 = BatchNormalization()(conv1_1)
-    conv1_2 = Conv2D(64, kernel_size=3, activation='relu', padding='same', name = 'conv1_2')(conv1_1)
+    conv1_2 = Conv2D(64, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'conv1_2')(conv1_1)
     conv1_2 = BatchNormalization()(conv1_2)
     pool1_1 = MaxPooling2D(pool_size=(2,2), name = 'pool1_1')(conv1_2)
     drop1_1 = Dropout(0.3, name = 'drop1_1')(pool1_1)
 
     #the 2-nd block
-    conv2_1 = Conv2D(128, kernel_size=3, activation='relu', padding='same', name = 'conv2_1')(drop1_1)
+    conv2_1 = Conv2D(128, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'conv2_1')(drop1_1)
     conv2_1 = BatchNormalization()(conv2_1)
-    conv2_2 = Conv2D(128, kernel_size=3, activation='relu', padding='same', name = 'conv2_2')(conv2_1)
+    conv2_2 = Conv2D(128, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'conv2_2')(conv2_1)
     conv2_2 = BatchNormalization()(conv2_2)
-    conv2_3 = Conv2D(128, kernel_size=3, activation='relu', padding='same', name = 'conv2_3')(conv2_2)
+    conv2_3 = Conv2D(128, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'conv2_3')(conv2_2)
     conv2_2 = BatchNormalization()(conv2_3)
     pool2_1 = MaxPooling2D(pool_size=(2,2), name = 'pool2_1')(conv2_3)
     drop2_1 = Dropout(0.3, name = 'drop2_1')(pool2_1)
 
     #the 3-rd block
-    conv3_1 = Conv2D(256, kernel_size=3, activation='relu', padding='same', name = 'conv3_1')(drop2_1)
+    conv3_1 = Conv2D(256, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'conv3_1')(drop2_1)
     conv3_1 = BatchNormalization()(conv3_1)
-    conv3_2 = Conv2D(256, kernel_size=3, activation='relu', padding='same', name = 'conv3_2')(conv3_1)
+    conv3_2 = Conv2D(256, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'conv3_2')(conv3_1)
     conv3_2 = BatchNormalization()(conv3_2)
-    conv3_3 = Conv2D(256, kernel_size=3, activation='relu', padding='same', name = 'conv3_3')(conv3_2)
+    conv3_3 = Conv2D(256, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'conv3_3')(conv3_2)
     conv3_3 = BatchNormalization()(conv3_3)
-    conv3_4 = Conv2D(256, kernel_size=3, activation='relu', padding='same', name = 'conv3_4')(conv3_3)
+    conv3_4 = Conv2D(256, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'conv3_4')(conv3_3)
     conv3_4 = BatchNormalization()(conv3_4)
     pool3_1 = MaxPooling2D(pool_size=(2,2), name = 'pool3_1')(conv3_4)
     drop3_1 = Dropout(0.3, name = 'drop3_1')(pool3_1)
 
     #the 4-th block
-    conv4_1 = Conv2D(256, kernel_size=3, activation='relu', padding='same', name = 'conv4_1')(drop3_1)
+    conv4_1 = Conv2D(256, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'conv4_1')(drop3_1)
     conv4_1 = BatchNormalization()(conv4_1)
-    conv4_2 = Conv2D(256, kernel_size=3, activation='relu', padding='same', name = 'conv4_2')(conv4_1)
+    conv4_2 = Conv2D(256, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'conv4_2')(conv4_1)
     conv4_2 = BatchNormalization()(conv4_2)
-    conv4_3 = Conv2D(256, kernel_size=3, activation='relu', padding='same', name = 'conv4_3')(conv4_2)
+    conv4_3 = Conv2D(256, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'conv4_3')(conv4_2)
     conv4_3 = BatchNormalization()(conv4_3)
-    conv4_4 = Conv2D(256, kernel_size=3, activation='relu', padding='same', name = 'conv4_4')(conv4_3)
+    conv4_4 = Conv2D(256, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'conv4_4')(conv4_3)
     conv4_4 = BatchNormalization()(conv4_4)
     pool4_1 = MaxPooling2D(pool_size=(2,2), name = 'pool4_1')(conv4_4)
     drop4_1 = Dropout(0.3, name = 'drop4_1')(pool4_1)
 
     #the 5-th block
-    conv5_1 = Conv2D(512, kernel_size=3, activation='relu', padding='same', name = 'conv5_1')(drop4_1)
+    conv5_1 = Conv2D(512, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'conv5_1')(drop4_1)
     conv5_1 = BatchNormalization()(conv5_1)
-    conv5_2 = Conv2D(512, kernel_size=3, activation='relu', padding='same', name = 'conv5_2')(conv5_1)
+    conv5_2 = Conv2D(512, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'conv5_2')(conv5_1)
     conv5_2 = BatchNormalization()(conv5_2)
-    conv5_3 = Conv2D(512, kernel_size=3, activation='relu', padding='same', name = 'conv5_3')(conv5_2)
+    conv5_3 = Conv2D(512, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'conv5_3')(conv5_2)
     conv5_3 = BatchNormalization()(conv5_3)
-    conv5_4 = Conv2D(512, kernel_size=3, activation='relu', padding='same', name = 'conv5_4')(conv5_3)
+    conv5_4 = Conv2D(512, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'conv5_4')(conv5_3)
     conv5_4 = BatchNormalization()(conv5_4)
     pool5_1 = MaxPooling2D(pool_size=(2,2), name = 'pool5_1')(conv5_4)
     drop5_1 = Dropout(0.3, name = 'drop5_1')(pool5_1)
@@ -99,74 +100,74 @@ def Decoder(inputs):
     # the 1st decoder block (numbering starts backwards to denote encoder-decoder relationship)
     decoder_outputs = []
     for input_hook in inputs:
-        decoder_conv1_1 = Conv2D(512, kernel_size=3, activation='relu', padding='same',
+        decoder_conv1_1 = Conv2D(512, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same',
                                  name='decoder_conv1_1')(input_hook) 
         decoder_conv1_1 = BatchNormalization()(decoder_conv1_1)
 
-        decoder_conv1_2 = Conv2D(512, kernel_size=3, activation='relu', padding='same',
+        decoder_conv1_2 = Conv2D(512, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same',
                                  name='decoder_conv1_2')(decoder_conv1_1)
-        decoder_conv1_3 = Conv2D(512, kernel_size=3, activation='relu', padding='same', 
+        decoder_conv1_3 = Conv2D(512, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', 
                                  name='decoder_conv1_3')(decoder_conv1_2)
         decoder_conv1_3 = BatchNormalization()(decoder_conv1_3)
-        decoder_conv1_4 = Conv2D(512, kernel_size=3, activation='relu', padding='same', 
+        decoder_conv1_4 = Conv2D(512, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', 
                                  name='decoder_conv1_4')(decoder_conv1_3)
         decoder_conv1_4 = BatchNormalization()(decoder_conv1_4)
         upsample1_1 = UpSampling2D((2,2), name='upsample1_1')(decoder_conv1_4)
         drop1_1 = Dropout(0.3, name="decoder_drop1_1")(upsample1_1)
 
-        decoder_conv2_1 = Conv2D(256, kernel_size=3, activation='relu', padding='same', name='decoder_conv2_1')(drop1_1)
+        decoder_conv2_1 = Conv2D(256, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name='decoder_conv2_1')(drop1_1)
         decoder_conv2_1 = BatchNormalization()(decoder_conv2_1)
-        decoder_conv2_2 = Conv2D(256, kernel_size=3, activation='relu', padding='same', name = 'decoder_decoder_conv2_2')(decoder_conv2_1)
+        decoder_conv2_2 = Conv2D(256, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'decoder_decoder_conv2_2')(decoder_conv2_1)
         decoder_conv2_2 = BatchNormalization()(decoder_conv2_2)
-        decoder_conv2_3 = Conv2D(256, kernel_size=3, activation='relu', padding='same', name = 'decoder_decoder_conv2_3')(decoder_conv2_2)
+        decoder_conv2_3 = Conv2D(256, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'decoder_decoder_conv2_3')(decoder_conv2_2)
         decoder_conv2_3 = BatchNormalization()(decoder_conv2_3)
-        decoder_conv2_4 = Conv2D(256, kernel_size=3, activation='relu', padding='same', name = 'decoder_decoder_conv2_4')(decoder_conv2_3)
+        decoder_conv2_4 = Conv2D(256, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', name = 'decoder_decoder_conv2_4')(decoder_conv2_3)
         decoder_conv2_4 = BatchNormalization()(decoder_conv2_4)
         upsample2_1 = UpSampling2D((2,2), name='upsample2_1')(decoder_conv2_4)
         decoder_drop2_1 = Dropout(0.3, name='decoder_drop2_1')(upsample2_1)
 
         #the 2-nd block
-        decoder_conv3_1 = Conv2D(256, kernel_size=3, activation='relu', padding='same', 
+        decoder_conv3_1 = Conv2D(256, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', 
                                  name='decoder_conv3_1')(decoder_drop2_1)
         decoder_conv3_1 = BatchNormalization()(decoder_conv3_1)
-        decoder_conv3_2 = Conv2D(256, kernel_size=3, activation='relu', padding='same', 
+        decoder_conv3_2 = Conv2D(256, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', 
                                 name='decoder_conv3_2')(decoder_conv3_1)
         decoder_conv3_2 = BatchNormalization()(decoder_conv3_2)
-        decoder_conv3_3 = Conv2D(256, kernel_size=3, activation='relu', padding='same', 
+        decoder_conv3_3 = Conv2D(256, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', 
                                  name='decoder_conv3_3')(decoder_conv3_2)
         decoder_conv3_3 = BatchNormalization()(decoder_conv3_3)
-        decoder_conv3_4 = Conv2D(256, kernel_size=3, activation='relu', padding='same', 
+        decoder_conv3_4 = Conv2D(256, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', 
                                  name='decoder_conv3_4')(decoder_conv3_3)
         decoder_conv3_4 = BatchNormalization()(decoder_conv3_4)
         upsample3_1 = UpSampling2D((2,2), name='upsample3_1')(decoder_conv3_4)
         decoder_drop3_1 = Dropout(0.3, name='decoder_drop3_1')(upsample3_1)
 
         # 1st decoder block
-        decoder_conv4_1 = Conv2D(128, kernel_size=3, activation='relu', padding='same',
+        decoder_conv4_1 = Conv2D(128, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same',
                                  name='decoder_conv4_1')(decoder_drop3_1)
         decoder_conv4_1 = BatchNormalization()(decoder_conv4_1)
-        decoder_conv4_2 = Conv2D(128, kernel_size=3, activation='relu', padding='same', 
+        decoder_conv4_2 = Conv2D(128, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', 
                                  name='decoder_conv4_2')(decoder_conv4_1)
         decoder_conv4_2 = BatchNormalization()(decoder_conv4_2)
-        decoder_conv4_3 = Conv2D(128, kernel_size=3, activation='relu', padding='same', 
+        decoder_conv4_3 = Conv2D(128, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', 
                                  name='decoder_conv4_3')(decoder_conv4_2)
         decoder_conv4_3 = BatchNormalization()(decoder_conv4_3)
-        decoder_conv4_4 = Conv2D(128, kernel_size=3, activation='relu', padding='same', 
+        decoder_conv4_4 = Conv2D(128, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same', 
                                  name='decoder_conv4_4')(decoder_conv4_3)
         conv4_4 = BatchNormalization()(decoder_conv4_4)
         upsample4_1 = UpSampling2D((2,2), name='upsample4_2')(decoder_conv4_4)
         drop4_1 = Dropout(0.3, name='decoder_drop4_1')(upsample4_1)
 
-        decoder_conv5_1 = Conv2D(64, kernel_size=3, activation='relu', padding='same',
+        decoder_conv5_1 = Conv2D(64, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same',
                                  name='decoder_conv5_1')(drop4_1)
         decoder_conv5_1 = BatchNormalization()(decoder_conv5_1)
-        decoder_conv5_2 = Conv2D(64, kernel_size=3, activation='relu', padding='same',
+        decoder_conv5_2 = Conv2D(64, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same',
                                  name='decoder_conv5_2')(decoder_conv5_1)
         decoder_conv5_2 = BatchNormalization()(decoder_conv5_2)
-        decoder_conv5_3 = Conv2D(64, kernel_size=3, activation='relu', padding='same',
+        decoder_conv5_3 = Conv2D(64, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same',
                                  name='decoder_conv5_3')(decoder_conv5_2)
         decoder_conv5_3 = BatchNormalization()(decoder_conv5_3)
-        decoder_conv5_4 = Conv2D(64, kernel_size=3, activation='relu', padding='same',
+        decoder_conv5_4 = Conv2D(64, kernel_size=3, activation=LeakyReLU(alpha=0.2), padding='same',
                                 name='decoder_conv5_4')(decoder_conv5_3)
         decoder_conv5_4 = BatchNormalization()(decoder_conv5_4)
         upsample5_1 = UpSampling2D((2,2), name='upsample5_2')(decoder_conv5_4)
@@ -208,7 +209,7 @@ def add_recurrent_regression_head(feature_extractor, num_outputs=1,
     #Flatten  output
     outputs = list()
     flatten6_1 = Flatten()(drop6_1)
-    dense6_1 = Dense(128, name='dense6_1', activation='relu')(flatten6_1)
+    dense6_1 = Dense(128, name='dense6_1', activation=LeakyReLU(alpha=0.2))(flatten6_1)
     out = Dense(num_outputs, name='regression_output')(dense6_1)
     outputs.append(out)
 
