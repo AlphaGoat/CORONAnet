@@ -244,7 +244,7 @@ def reset_regression_head_weights(model):
     """
     reset_layer_weights(model.get_layer('dense6_1'))
     reset_layer_weights(model.get_layer('regression_output'))
-    reset_layer_weights(model.get_layer('lstm6_1'))
+#    reset_layer_weights(model.get_layer('lstm6_1'))
 
 
 def fetch_model(image_shape, model_descriptor, num_targets=1):
