@@ -229,7 +229,7 @@ def freeze_feature_extractor(model, freeze_lstm=True):
     Freeze weights of feature extractor portion of model 
     """
     # Freeze feature extractor 
-    model.get_layer('time_distributed_feature_extractor').trainable = False
+    model.get_layer('time_distributed_model_0').trainable = False
     
     # if we want to freeze the LSTM layer, do so now
     if freeze_lstm:
@@ -244,6 +244,7 @@ def reset_regression_head_weights(model):
     """
     reset_layer_weights(model.get_layer('dense6_1'))
     reset_layer_weights(model.get_layer('regression_output'))
+    reset_layer_weights(model.get_layer('lstm6_1'))
 
 
 def fetch_model(image_shape, model_descriptor, num_targets=1):
