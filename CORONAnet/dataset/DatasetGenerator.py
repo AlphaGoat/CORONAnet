@@ -194,7 +194,7 @@ class DatasetGenerator():
             # after applying this function. We don't want that, so this is a stupid wrapper
             # to remove the first return val after the rejection_resampler is applied
             def _toss_first_val(first_val, args):
-                return args[0], args[1], args[2]
+                return args[0], args[1]
 
             return dataset.map(_toss_first_val)
 
