@@ -9,7 +9,7 @@ import glob
 import numpy as np
 import tensorflow as tf
 from functools import partial
-from typing import Callable, Tuple, List
+from typing import Callable, Tuple, List, Union, Optional
 
 from CORONAnet.math import apply_transform
 
@@ -18,17 +18,18 @@ class DatasetGenerator():
     def __init__(self,
                  tfrecord_path: str,
                  parse_function: Callable,
-                 image_shape: Tuple[int, int, int] or List[int],
+                 image_shape: Union[Tuple[int, int, int], List[int]],
                  batch_size: int=32,
                  buffer_size: int=32,
                  max_len_sequence: int=20,
                  return_filename: bool=False,
                  oversampling_technique: str=None,
                  target_labels: List[str]=["peak_intensity"],
-                 target_transforms: str or List[str]="log-transform",
+                 target_transforms: Union[str, List[str]]="log-transform",
                  intensity_bins: List[float]=[],
                  oversampled_distribution: List[float]=[0.3, 0.7],
                  initial_distribution: List[float]=[0.02, 0.98],
+                 repeat: Optional[int]=None,
                  ):
         """
         Initialize data generator for coronagraph data 
@@ -61,6 +62,7 @@ class DatasetGenerator():
         self.image_shape = image_shape
         self.batch_size = batch_size
         self.return_filename = return_filename
+        self.repeat = repeat
 
         # prepare proto parse function
         self.target_labels = target_labels
@@ -134,6 +136,9 @@ class DatasetGenerator():
 
         # batch dataset
         dataset = dataset.batch(self.batch_size)
+
+        if self.repeat is not None:
+            dataset = dataset.repeat(self.repeat)
 
         # return reference to data pipeline
         return dataset
