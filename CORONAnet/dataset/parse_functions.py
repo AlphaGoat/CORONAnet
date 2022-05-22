@@ -162,7 +162,7 @@ def multi_frame_parse_function(example_proto: tf.train.Example,
         elif isinstance(target_transforms, str):
             return apply_transform(val, target_transforms)
         else:
-            raise ValueError(f"label_transform is an unrecognized type {type(target_transforms)}")
+            raise TypeError(f"label_transform is an unrecognized type {type(target_transforms)}")
 
     # apply transforms to target labels
     label_values = list()

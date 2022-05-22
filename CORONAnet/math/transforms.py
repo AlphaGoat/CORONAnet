@@ -12,6 +12,7 @@ import tensorflow as tf
 from pathlib import Path
 from scipy.stats import boxcox
 import matplotlib.pyplot as plt
+from typing import List, Dict, Union
 
 
 def boxcox_transform(y, lam=1.0, **kwargs):
@@ -57,5 +58,47 @@ def reverse_transform(y, transform_method=None, **kwargs):
         return np.exp(y)
     elif transform_method == 'no-transform' or transform_method is None:
         return y 
+    else:
+        raise NotImplementedError(f"Transform type {transform_method} not implemented")
+
+
+def reverse_transform_tf(
+    y: tf.Tensor,
+    target_transforms: Union[Dict[str, str], List[str], str]=None,
+):
+    """
+    wrapper for reverse transform that takes
+    multiple inputs
+    """
+    if target_transforms is None:
+        return y
+    elif isinstance(target_transforms, dict):
+        transformed_target_tensors = []
+        for i, key in enumerate(target_transforms.keys()):
+            transformed_y = apply_reverse_transform_tf(y[..., i], 
+                    transform_method=target_transforms[key])
+            transformed_target_tensors.append(transformed_y)
+        return tf.concat(transformed_target_tensors, axis=-1)
+    elif isinstance(target_transforms, list):
+        transformed_target_tensors = []
+        for i, transform in enumerate(target_transforms):
+            transformed_y = apply_reverse_transform_tf(y[..., i], 
+                    transform_method=transform)
+            transformed_target_tensors.append(transformed_y)
+        return tf.concat(transformed_target_tensors, axis=-1)
+    elif isinstance(target_transforms, str):
+        return apply_reverse_transform_tf(y, transform_method=target_transforms)
+    else:
+        raise TypeError(f"target_transforms is an unrecognized type {type(target_transforms)}")
+
+def apply_reverse_transform_tf(
+    y: tf.Tensor, 
+    transform_method: str="log-transform",
+    **kwargs
+):
+    if transform_method == 'log-transform':
+        return tf.exp(y)
+    elif transform_method == 'no-transform' or transform_method is None:
+        return y
     else:
         raise NotImplementedError(f"Transform type {transform_method} not implemented")

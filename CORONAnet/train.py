@@ -5,6 +5,7 @@ Author: Peter Thomas
 Date: 19 April 2022
 """
 import os
+import copy
 import json
 import pydash
 import logging
@@ -17,6 +18,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 from typing import Callable, List, Dict
 
+from CORONAnet.utils import is_jsonable
 from CORONAnet.config import TrainConfig
 from CORONAnet.model import (
     fetch_model,
@@ -152,7 +154,8 @@ def train(
                 + "train_total_loss:{:7.2f}\n\n".format(epoch_train_total_loss / count))
         else:
             print("\n\ntrain_regression_loss: {:7.2f}, train_total_loss:{:7.2f}\n\n".
-                format(epoch_train_regression_loss / count, epoch_train_total_loss / count))
+                format(epoch_train_regression_loss.numpy().sum() / count, 
+                        epoch_train_total_loss.numpy().sum() / count))
 
         # perform validation loop
         val_count = 0
@@ -237,7 +240,8 @@ def train(
 
         else:
             print("\n\nval_regression_loss: {:7.2f}, total_val_loss:{:7.2f}".
-                format(epoch_val_regression_loss / val_count, epoch_val_total_loss / val_count))
+                format(epoch_val_regression_loss.numpy().sum() / val_count, 
+                        epoch_val_total_loss.numpy().sum() / val_count))
 
         for metric in metrics_to_monitor:
             print("{0} : {1:.4f}".format(metric, metrics_to_monitor[metric]))
@@ -271,8 +275,16 @@ def main_cli(flags: TrainConfig):
     # if a log directory is provided, save flags to directory
     if flags.log_dir is not None:
         os.makedirs(flags.log_dir, exist_ok=True)
+        cli_flags = vars(flags)
+        
+        # Save all json-serializable objects in cli_flags to file
+        serializable_flags = {}
+        for key in cli_flags:
+            if is_jsonable(cli_flags[key]):
+                serializable_flags[key] = cli_flags[key]
+
         with open(os.path.join(flags.log_dir, "cli_args.json"), 'w') as f:
-            json.dump(flags.__dict__, f, indent=2)
+            json.dump(serializable_flags, f, indent=2)
 
     # Get downsampled image shape
     image_shape = get_downsampled_image_dims(IMAGE_SHAPE, flags.downsample_factor)
@@ -312,10 +324,12 @@ def main_cli(flags: TrainConfig):
     optimizer = tf.keras.optimizers.Adam(learning_rate=flags.learning_rate)
 
     # get regression loss function 
-    regression_loss = fetch_loss_function(flags.regression_loss_function)
+    regression_loss = fetch_loss_function(flags.loss.regression_loss_function,
+            **flags.loss.regression_loss_parameters)
 
     # get autoencoder loss function
-    autoencoder_loss = fetch_loss_function(flags.autoencoder_loss_function)
+    autoencoder_loss = fetch_loss_function(flags.loss.autoencoder_loss_function,
+            **flags.loss.autoencoder_loss_parameters)
 
     # start model training 
     train(
@@ -329,8 +343,8 @@ def main_cli(flags: TrainConfig):
         regression_loss,
         autoencoder_loss_function=autoencoder_loss,
         use_autoencoder=True if flags.model_architecture == "VGG16+AE" else None,
-        regression_loss_scale=flags.regression_loss_scale,
-        autoencoder_loss_scale=flags.autoencoder_loss_scale,
+        regression_loss_scale=flags.loss.regression_loss_scale,
+        autoencoder_loss_scale=flags.loss.autoencoder_loss_scale,
         num_train_epochs=flags.num_representation_training_epochs,
     )
 
@@ -347,14 +361,17 @@ def main_cli(flags: TrainConfig):
         batch_size=flags.batch_size,
         max_len_sequence=flags.max_len_sequence,
         buffer_size=flags.buffer_size,
-        oversampling_technique=flags.oversampling_technique,
-        oversampled_distribution=[
-            flags.sep_oversampling_rate,
-            1. - flags.sep_oversampling_rate
-        ] if flags.sep_oversampling_rate else None,
+#        oversampling_technique=flags.oversampling_technique,
+#        oversampled_distribution=[
+#            flags.sep_oversampling_rate,
+#            1. - flags.sep_oversampling_rate
+#        ] if flags.sep_oversampling_rate else None,
         target_labels=["peak_intensity"],
         target_transforms="log-transform",
     )
+
+    second_stage_loss = fetch_loss_function(flags.loss.second_stage_loss_function,
+            target_transforms="log-transform", **flags.loss.second_stage_loss_parameters)
 
 
     # begin second stage of model training
@@ -366,7 +383,7 @@ def main_cli(flags: TrainConfig):
         flags.log_dir,
         flags.current_checkpoint_savepath,
         flags.best_checkpoint_savepath,
-        regression_loss,
+        second_stage_loss,
         num_train_epochs=flags.num_regression_training_epochs,
     )
 

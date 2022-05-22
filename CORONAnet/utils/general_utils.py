@@ -5,6 +5,7 @@ Author: Peter Thomas
 Date: 17 April 2022 
 """
 import os
+import json
 
 
 def ask_for_confirmation(prompt):
@@ -20,3 +21,14 @@ def ask_for_confirmation(prompt):
 
 def get_basename(file_path):
     return os.path.splitext(os.path.basename(file_path))[0]
+
+
+def is_jsonable(x):
+    """
+    Check that input is json serializable
+    """
+    try:
+        json.dumps(x)
+        return True
+    except:
+        return False

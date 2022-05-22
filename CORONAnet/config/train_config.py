@@ -6,8 +6,35 @@ Date: 23 April 2022
 """
 import pyrallis
 import numpy as np
-from typing import List
+from typing import Any, Dict, List
 from dataclasses import dataclass, field
+
+
+@dataclass
+class LossConfig:
+
+    # Loss function to use for regression branch
+    regression_loss_function: str = 'mean-squared-error'
+
+    # Loss function to use for autoencoder branch, if applicable
+    autoencoder_loss_function: str = 'mean-squared-error'
+
+    second_stage_loss_function: str = 'mean-squared-error'
+    
+    # Weight for autoencoder loss (if applicable)
+    autoencoder_loss_scale: float = 1.0
+
+    # Weight for regression loss 
+    regression_loss_scale: float = 1.0
+
+    # Parameters for regression loss function in first-stage
+    regression_loss_parameters: Dict[str, Any] = field(default_factory=dict)
+
+    # Parameters for autoencoder loss function in first-stage
+    autoencoder_loss_parameters: Dict[str, Any] = field(default_factory=dict)
+
+    # Parameters for second-stage loss function
+    second_stage_loss_parameters: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -60,18 +87,6 @@ class TrainConfig:
     # Learning rate to use for training 
     learning_rate: float = 1e-4
 
-    # Loss function to use for regression branch 
-    regression_loss_function: str = "mean-squared-error"
-
-    # Loss function to use for representation branch
-    autoencoder_loss_function: str = "mean-squared-error"
-
-    # Weight for regression loss
-    regression_loss_scale: float = 1.0
-
-    # Weight for autoencoder loss (if it is being used)
-    autoencoder_loss_scale: float = 1.0
-
     # Evaluation metric to use to determine best epoch of training 
     eval_metric: str = "valid-loss"
 
@@ -93,6 +108,9 @@ class TrainConfig:
     # Path to save log files for training 
     log_dir: str = None
 
+    # Encapsulate loss parameters
+    loss: LossConfig = field(default_factory=LossConfig)
+
 
 #@dataclass
 #def ModelConfig:
@@ -106,11 +124,7 @@ class DatasetConfig:
     sep_threshold: float = 10.0
 
     # Intensity threshold to distinguish elevated non-SEP events, in pfu
-    elevated_intensity_threshold: float = 10.0 / np.e**2
-
-@dataclass
-class LossConfig:
-    pass
+    elevated_intensity_threshold: float = round(10.0 / np.e**2, 6)
 
 
 @dataclass
