@@ -122,10 +122,10 @@ def train(
                 pred_results = model(images, training=True)
 
                 # Calculate loss
-                regression_loss = regression_loss_function(targets, pred_results[0])
+                regression_loss = regression_loss_function(targets, pred_results)
 
                 if use_autoencoder:
-                    autoencoder_loss = autoencoder_loss_function(images, pred_results[1])
+                    autoencoder_loss = autoencoder_loss_function(images, pred_results)
                     total_loss = regression_loss_scale * regression_loss + autoencoder_loss_scale * autoencoder_loss
                 else:
                     total_loss = regression_loss
@@ -166,10 +166,10 @@ def train(
             val_preds = model(image_data, training=False)
 
             # calculate loss
-            val_regression_loss = regression_loss_function(targets, val_preds[0])
+            val_regression_loss = regression_loss_function(targets, val_preds)
 
             if use_autoencoder:
-                val_autoencoder_loss = autoencoder_loss_function(images, val_preds[1])
+                val_autoencoder_loss = autoencoder_loss_function(images, val_preds)
                 total_val_loss = regression_loss_scale * val_regression_loss + \
                         autoencoder_loss_scale * val_autoencoder_loss
             else:
