@@ -67,8 +67,8 @@ class GeneralizedReweightedLoss():
         for i, (left_edge, right_edge) in enumerate(zip(self.bin_edges[:-1], 
                                                          self.bin_edges[1:])):
             bin_mask = tf.logical_and(
-                tf.less(y_true_original_vals, right_edge),
-                tf.greater_equal(y_true_original_vals, left_edge),
+                tf.less(y_true_original_vals[..., 0], right_edge),
+                tf.greater_equal(y_true_original_vals[..., 0], left_edge),
             )
 
             # Get events in this category
@@ -78,12 +78,12 @@ class GeneralizedReweightedLoss():
             # handle case where there are no events in this category in this batch
             bin_loss = tf.cond(tf.shape(y_true_bin)[0] > 0, 
                 true_fn=lambda: self.base_loss_fn(y_true_bin, y_pred_bin), 
-                false_fn=lambda: tf.constant(0.0, dtype=tf.float32),
+                false_fn=lambda: tf.zeros_like(y_true, tf.float32),
             )
 
             weighted_loss += self.weights[i] * bin_loss
 
-        return tf.reduce_sum(weighted_loss)
+        return tf.reduce_mean(tf.reduce_sum(weighted_loss, axis=-1))
 
 
 def huber_loss(
@@ -96,7 +96,7 @@ def huber_loss(
     """
     diff = tf.abs(y_true - y_pred)
     loss = tf.where(diff <= delta, (1/2) * diff**2, delta * (diff - (1/2) * delta))
-    return loss
+    return tf.reduce_mean(tf.reduce_sum(loss, axis=-1))
 
 
 def fetch_loss_function(loss_name, **kwargs):

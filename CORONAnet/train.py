@@ -149,7 +149,7 @@ def train(
                                      "loss/autoencoder_loss", step=epoch)
 
         if use_autoencoder:
-            print("\n\ntrain_regression_loss: {:7.2f}, ".format(epoch_train_regression_loss / count)
+            print("\n\ntrain_regression_loss: {:8.2f}, ".format(epoch_train_regression_loss / count)
                 + "train_autoencoder_loss: {:7.2f}, ".format(epoch_train_autoencoder_loss / count)
                 + "train_total_loss:{:7.2f}\n\n".format(epoch_train_total_loss / count))
         else:
@@ -176,8 +176,8 @@ def train(
                 total_val_loss = val_regression_loss
 
             val_count += 1
-            epoch_val_regression_loss += val_regression_loss 
-            epoch_val_total_loss += total_val_loss
+            epoch_val_regression_loss += val_regression_loss.numpy()
+            epoch_val_total_loss += total_val_loss.numpy()
 
             epoch_val_preds.append(val_preds.numpy())
             epoch_val_targets.append(targets.numpy())
@@ -240,8 +240,7 @@ def train(
 
         else:
             print("\n\nval_regression_loss: {:7.2f}, total_val_loss:{:7.2f}".
-                format(epoch_val_regression_loss.numpy().sum() / val_count, 
-                        epoch_val_total_loss.numpy().sum() / val_count))
+                format(epoch_val_regression_loss / val_count, epoch_val_total_loss / val_count))
 
         for metric in metrics_to_monitor:
             print("{0} : {1:.4f}".format(metric, metrics_to_monitor[metric]))
@@ -252,7 +251,7 @@ def train(
 
         # if this is the best checkpoint thus far, save as well
         if best_checkpoint_savepath is not None:
-            if epoch_val_total_loss.numpy().sum() < best_val_loss or best_val_loss == -1.:
+            if epoch_val_total_loss < best_val_loss or best_val_loss == -1.:
                 best_val_loss = epoch_val_total_loss
                 model.save_weights(best_checkpoint_savepath)
 
@@ -371,7 +370,7 @@ def main_cli(flags: TrainConfig):
     )
 
     second_stage_loss = fetch_loss_function(flags.loss.second_stage_loss_function,
-            target_transforms="log-transform", **flags.loss.second_stage_loss_parameters)
+            label_transforms="log-transform", **flags.loss.second_stage_loss_parameters)
 
 
     # begin second stage of model training
