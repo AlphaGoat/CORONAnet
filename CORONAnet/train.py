@@ -169,12 +169,12 @@ def train(
         val_count = 0
         epoch_val_regression_loss, epoch_val_autoencoder_loss, epoch_val_total_loss = 0., 0., 0.
         epoch_val_preds, epoch_val_targets = list(), list()
-        for step, (image_data, targets) in enumerate(valid_dataset):
+        for step, (image_data, val_targets) in enumerate(valid_dataset):
 
             val_preds = model(image_data, training=False)
 
             # calculate loss
-            val_regression_loss = regression_loss_function(targets, val_preds)
+            val_regression_loss = regression_loss_function(val_targets, val_preds)
 
             if use_autoencoder:
                 val_autoencoder_loss = autoencoder_loss_function(images, val_preds)
@@ -188,7 +188,7 @@ def train(
             epoch_val_total_loss += total_val_loss.numpy()
 
             epoch_val_preds.append(val_preds.numpy())
-            epoch_val_targets.append(targets.numpy())
+            epoch_val_targets.append(val_targets.numpy())
 
         epoch_val_preds = np.concatenate(epoch_val_preds)
         epoch_val_targets = np.concatenate(epoch_val_targets)
