@@ -402,4 +402,4 @@ def main_cli(flags: TrainConfig):
 
 if __name__ == '__main__':
 
-    main_cli(
+    main_cli()
