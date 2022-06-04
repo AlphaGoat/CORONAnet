@@ -124,6 +124,7 @@ def train(
         epoch_train_autoencoder_loss = 0.0
 
         # begin training loop
+        epoch_train_targets = []
         for step, (images, targets) in enumerate(train_dataset):
 
             with tf.GradientTape() as tape:
@@ -141,10 +142,14 @@ def train(
                 # calculate gradients and backpropagate gradients to weights
                 gradients = tape.gradient(total_loss, model.trainable_variables)
                 optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-
+            
+            epoch_train_targets.append(targets.numpy())
             epoch_train_total_loss += total_loss
             epoch_train_regression_loss += regression_loss
             count += 1
+
+        epoch_train_targets = np.concatenate(epoch_train_targets)
+        print("train_targets: ", np.exp(epoch_train_targets))
 
         # write summary data 
         logger.write_data_to_log(optimizer.lr, "learning_rate", step=epoch)
@@ -192,6 +197,7 @@ def train(
 
         epoch_val_preds = np.concatenate(epoch_val_preds)
         epoch_val_targets = np.concatenate(epoch_val_targets)
+        print("valid_targets: ", np.exp(epoch_val_targets))
 
         # convert predictions and targets into dataframes
         epoch_val_preds_df = convert_labels_to_df(epoch_val_preds, target_labels=target_labels)

@@ -1136,6 +1136,7 @@ def write_tfrecords_by_n_frame_association():
         valid_partition=flags.valid_partition,
         test_partition=flags.test_partition,
     )
+    import pdb; pdb.set_trace()
 
     # NOTE: remove when full dataset becomes available...
     # move test SEP events to train as well
