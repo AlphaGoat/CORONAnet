@@ -115,7 +115,7 @@ def save_serialized_plots(run_df,
         best_epoch = len(run_df)
 
     for key in plot_keys:
-        if key not in analytics_plots_dict:
+        if key not in analytics_plots_dict.keys():
             continue
         plot_array = analytics_plots_dict[key][best_epoch-1]
         pil_image = Image.fromarray(plot_array)

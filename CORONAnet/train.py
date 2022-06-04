@@ -6,6 +6,7 @@ Date: 19 April 2022
 """
 import os
 import copy
+import time
 import json
 import pydash
 import logging
@@ -59,7 +60,9 @@ def train(
     elevated_intensity_threshold: float=10.0 / np.e**2,
     target_transforms: str or List[str] or Dict[str, str]="log-transform",
     target_labels: List[str]=["peak_intensity"],
-    num_train_epochs: int=100):
+    num_train_epochs: int=100,
+    curr_runtime: float=None,
+    runtime_limit: float=None):
     """
     Main train function for CORONAnet 
 
@@ -106,8 +109,13 @@ def train(
     train_dataset = train_data_generator.dataset 
     valid_dataset = valid_data_generator.dataset
 
+    if curr_runtime is not None:
+        start_runtime = curr_runtime
+    else:
+        start_runtime = time.perf_counter()
+
     for epoch in range(num_train_epochs):
-        print(f"\nepoch {epoch} / {num_train_epochs}")
+        print(f"\nepoch {epoch} / {num_train_epochs + 1}")
 
         count = 0
         best_val_loss = -1.0
@@ -255,6 +263,11 @@ def train(
                 best_val_loss = epoch_val_total_loss
                 model.save_weights(best_checkpoint_savepath)
 
+        if runtime_limit is not None:
+            if runtime_limit < time.perf_counter() - start_runtime:
+                print("Runtime limit exceeded.")
+                return
+
 
 @pyrallis.wrap()
 def main_cli(flags: TrainConfig):
@@ -389,4 +402,4 @@ def main_cli(flags: TrainConfig):
 
 if __name__ == '__main__':
 
-    main_cli()
+    main_cli(
