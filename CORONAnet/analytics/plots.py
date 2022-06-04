@@ -105,6 +105,10 @@ def generate_prediction_plot(
     non_elevated_true = y_true[(~sep_mask) & (~elevated_mask)]
     non_elevated_pred = y_true[(~sep_mask) & (~elevated_mask)]
 
+    print("target_transform: ", target_transform)
+    print("sep_true: ", np.exp(sep_true))
+    print("elevated_true: ", np.exp(elevated_true))
+
     # plot predictions (color coding different categories of objects:
     # Red: SEP-events
     # Green: elevated CME events
