@@ -99,9 +99,6 @@ def generate_prediction_plot(
     sep_true = y_true[sep_mask]
     sep_pred = y_pred[sep_mask]
 
-    print("sep_true: ", np.exp(sep_true))
-    print("sep_pred: ", np.exp(sep_pred))
-
     elevated_true = y_true[elevated_mask]
     elevated_pred = y_pred[elevated_mask]
 
