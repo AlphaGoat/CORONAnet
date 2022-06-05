@@ -99,15 +99,14 @@ def generate_prediction_plot(
     sep_true = y_true[sep_mask]
     sep_pred = y_pred[sep_mask]
 
+    print("sep_true: ", np.exp(sep_true))
+    print("sep_pred: ", np.exp(sep_pred))
+
     elevated_true = y_true[elevated_mask]
     elevated_pred = y_pred[elevated_mask]
 
     non_elevated_true = y_true[(~sep_mask) & (~elevated_mask)]
     non_elevated_pred = y_true[(~sep_mask) & (~elevated_mask)]
-
-    print("target_transform: ", target_transform)
-    print("sep_true: ", np.exp(sep_true))
-    print("elevated_true: ", np.exp(elevated_true))
 
     # plot predictions (color coding different categories of objects:
     # Red: SEP-events
@@ -143,8 +142,8 @@ def generate_prediction_plot(
     ]
     ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
 
-    plt.xlabel("Observed Proton Peak Log Intensity") 
-    plt.ylabel("Predicted Proton Peak Log Intensity")
+    plt.xlabel(f"Observed Proton Log {''.join(list(map(lambda x: x.capitalize(), target_label.split('_'))))}") 
+    plt.ylabel("Predicted Proton Log {''.join(list(map(lambda x: x.capitalize(), target_label.split('_'))))}")
 
     return fig
 

@@ -178,6 +178,19 @@ def prepare_10MeV_proton_event_dataframes(ten_mev_event_file,
 
     ten_mev_sep_events_df = pd.concat([ten_mev_sep_events_df, re2_sep_events_df])
 
+    # remove all remaining SEP events in re2 dataframe (the ones that are remaining
+    # should already be included in the ten_mev_sep dataframe)
+    re_sep_peak_indices = ten_mev_re2_events_df[2::4][
+        ten_mev_re2_events_df[2::4]['Intensity'] >= 10.0
+    ].index
+    
+    re_sep_full_indices = []
+    for idx in re_sep_peak_indices:
+        re_sep_full_indices.extend([i for i in range(idx - 2, idx + 2)])
+    
+    # drop indices of SEP events in re2 dataframe
+    ten_mev_re2_events_df = ten_mev_re2_events_df.drop(index=re_sep_full_indices)
+
     return ten_mev_sep_events_df, ten_mev_re2_events_df
 
 
@@ -715,7 +728,7 @@ def label_sequence_dir_data(
             sep_correlated_cme_df['peak_intensity'] = sep_proton_intensities
 
             elevated_proton_intensities = elevated_proton_labels[2::4]['Intensity']
-            elevated_proton_intensities = elevated_proton_correlated_cme_df.index
+            elevated_proton_intensities.index = elevated_proton_correlated_cme_df.index
             elevated_proton_correlated_cme_df['peak_intensity'] = elevated_proton_intensities
 
             uncorrelated_cme_df['peak_intensity'] = 10.0 / np.e**2
@@ -877,7 +890,7 @@ def serialize_sequence_data(image_data_sequence: np.array,
         'class_id': _int64_feature(data_label['target'] + 1),
         'num_frames': _int64_feature(len(image_list)),
         'sequence_raw': _bytes_feature(image_stack.tostring()),
-        'sequence_date': _bytes_feature(sequence_date),
+        'sequence_date': _bytes_feature(bytes(sequence_date, 'utf-8')),
     }
 
     for label in target_labels:
@@ -987,7 +1000,7 @@ def write_tfrecords_by_sequence_dir(
         sep_correlated_cme_df,
         elevated_proton_correlated_cme_df,
         uncorrelated_cme_df,
-        partition_method='sep-balanced',
+        partition_method='sep-and-non-sep-balanced',
         train_partition=train_partition,
         valid_partition=valid_partition,
         test_partition=test_partition,
@@ -1136,7 +1149,6 @@ def write_tfrecords_by_n_frame_association():
         valid_partition=flags.valid_partition,
         test_partition=flags.test_partition,
     )
-    import pdb; pdb.set_trace()
 
     # NOTE: remove when full dataset becomes available...
     # move test SEP events to train as well
