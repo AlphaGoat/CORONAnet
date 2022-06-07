@@ -94,7 +94,7 @@ def generate_prediction_plot(
 
     # separate sep events and elevated intensity events
     sep_mask = y_true >= log_sep_threshold
-    elevated_mask = (log_sep_threshold > y_true) & (y_true >= log_elevated_threshold)
+    elevated_mask = (log_sep_threshold > y_true) & (y_true > log_elevated_threshold)
 
     sep_true = y_true[sep_mask]
     sep_pred = y_pred[sep_mask]
@@ -103,7 +103,7 @@ def generate_prediction_plot(
     elevated_pred = y_pred[elevated_mask]
 
     non_elevated_true = y_true[(~sep_mask) & (~elevated_mask)]
-    non_elevated_pred = y_true[(~sep_mask) & (~elevated_mask)]
+    non_elevated_pred = y_pred[(~sep_mask) & (~elevated_mask)]
 
     # plot predictions (color coding different categories of objects:
     # Red: SEP-events
