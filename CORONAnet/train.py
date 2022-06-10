@@ -114,79 +114,67 @@ def train(
     else:
         start_runtime = time.perf_counter()
 
+    # define training function
+    @tf.function
+    def train_on_batch(X, y_true):
+        with tf.GradientTape() as tape:
+            y_pred = model(X, training=True)
+            reg_loss_value = regression_loss_function(y_true, y_pred)
+            loss_value = regression_loss_scale * reg_loss_value
+            if use_autoencoder:
+                auto_loss_value = autoencoder_loss_function(X, y_pred)
+                loss_value += autoencoder_loss_scale * auto_loss_value
+
+        # apply gradients to weights
+        grads = tape.gradient(loss_value, model.trainable_variables)
+        optimizer.apply_gradients(zip(grads, model.trainable_variables))
+
+        return loss_value
+
+    @tf.function
+    def valid_on_batch(X, y_true):
+        y_pred = model(X, training=False)
+        reg_loss_value = regression_loss_function(y_true, y_pred)
+        loss_value = regression_loss_scale * reg_loss_value
+        if use_autoencoder:
+            auto_loss_value = autoencoder_loss_function(X, y_pred)
+            loss_value += autoencoder_loss_scale * auto_loss_value
+        
+        return loss_value, y_pred
+
     for epoch in range(num_train_epochs):
         print(f"\nepoch {epoch} / {num_train_epochs + 1}")
 
         count = 0
         best_val_loss = -1.0
         epoch_train_total_loss = 0.0 
-        epoch_train_regression_loss = 0.0
-        epoch_train_autoencoder_loss = 0.0
 
         # begin training loop
         epoch_train_targets = []
         for step, (images, targets) in enumerate(train_dataset):
 
-            with tf.GradientTape() as tape:
-                pred_results = model(images, training=True)
-
-                # Calculate loss
-                regression_loss = regression_loss_function(targets, pred_results)
-
-                if use_autoencoder:
-                    autoencoder_loss = autoencoder_loss_function(images, pred_results)
-                    total_loss = regression_loss_scale * regression_loss + autoencoder_loss_scale * autoencoder_loss
-                else:
-                    total_loss = regression_loss
-
-                # calculate gradients and backpropagate gradients to weights
-                gradients = tape.gradient(total_loss, model.trainable_variables)
-                optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+            batch_loss = train_on_batch(images, targets)
             
-            epoch_train_total_loss += total_loss
-            epoch_train_regression_loss += regression_loss
+            epoch_train_total_loss += batch_loss.numpy()
             count += 1
 
         # write summary data 
         logger.write_data_to_log(optimizer.lr, "learning_rate", step=epoch)
         logger.write_data_to_log(epoch_train_total_loss / count, 
                                  "loss/total_loss", step=epoch)
-        logger.write_data_to_log(epoch_train_regression_loss / count, 
-                                "loss/regression_loss", step=epoch)
-        if use_autoencoder:
-            logger.write_data_to_log(epoch_train_autoencoder_loss / count,
-                                     "loss/autoencoder_loss", step=epoch)
 
-        if use_autoencoder:
-            print("\n\ntrain_regression_loss: {:8.2f}, ".format(epoch_train_regression_loss / count)
-                + "train_autoencoder_loss: {:7.2f}, ".format(epoch_train_autoencoder_loss / count)
-                + "train_total_loss:{:7.2f}\n\n".format(epoch_train_total_loss / count))
-        else:
-            print("\n\ntrain_regression_loss: {:7.2f}, train_total_loss:{:7.2f}\n\n".
-                format(epoch_train_regression_loss.numpy().sum() / count, 
-                        epoch_train_total_loss.numpy().sum() / count))
+        print("\n\ntrain_total_loss:{:7.2f}\n\n".format(epoch_train_total_loss / count))
 
         # perform validation loop
         val_count = 0
-        epoch_val_regression_loss, epoch_val_autoencoder_loss, epoch_val_total_loss = 0., 0., 0.
-        epoch_val_preds, epoch_val_targets = list(), list()
+        epoch_val_total_loss = 0., 0., 0.
+        epoch_val_preds, epoch_val_targets = [], []
         for step, (image_data, val_targets) in enumerate(valid_dataset):
 
-            val_preds = model(image_data, training=False)
-
-            # calculate loss
-            val_regression_loss = regression_loss_function(val_targets, val_preds)
-
-            if use_autoencoder:
-                val_autoencoder_loss = autoencoder_loss_function(images, val_preds)
-                total_val_loss = regression_loss_scale * val_regression_loss + \
-                        autoencoder_loss_scale * val_autoencoder_loss
-            else:
-                total_val_loss = val_regression_loss
+            batch_valid_loss, val_preds = model(image_data, training=False)
 
             val_count += 1
-            epoch_val_regression_loss += val_regression_loss.numpy()
-            epoch_val_total_loss += total_val_loss.numpy()
+            epoch_val_total_loss += batch_valid_loss.numpy()
 
             epoch_val_preds.append(val_preds.numpy())
             epoch_val_targets.append(val_targets.numpy())
@@ -222,15 +210,9 @@ def train(
         logger.write_data_to_log(prediction_plots_dict, step=epoch)
         logger.write_data_to_log(epoch_val_total_loss / val_count, 
                                  "valid_loss/total_loss", epoch)
-        logger.write_data_to_log(epoch_val_regression_loss / val_count, 
-                                 "valid_loss/regression_loss", epoch)
 
         # clear plots 
         plt.close("all")
-
-        if use_autoencoder:
-            logger.write_data_to_log(epoch_val_autoencoder_loss / val_count, 
-                                     "valid_loss/autoencoder_loss", epoch)
 
         metrics_to_monitor = dict()
         metrics_to_monitor["F1 Score"] = classification_df['f1'].iloc[0]
@@ -242,14 +224,9 @@ def train(
         for label in target_labels:
             metrics_to_monitor[f'{label} mae'] = regression_df[f'{label} (SEP) mean absolute error'].iloc[0]
 
-        if use_autoencoder:
-            print("\n\nval_regression_loss: {:7.2f}, val_autoencoder_loss: {:7.2f}, total_val_loss:{:7.2f}".
-                format(epoch_val_regression_loss / val_count, epoch_val_autoencoder_loss / val_count, 
-                       epoch_val_total_loss / val_count))
 
-        else:
-            print("\n\nval_regression_loss: {:7.2f}, total_val_loss:{:7.2f}".
-                format(epoch_val_regression_loss / val_count, epoch_val_total_loss / val_count))
+        print("\n\nval_regression_loss: {:7.2f}, total_val_loss:{:7.2f}".
+            format(epoch_val_total_loss / val_count))
 
         for metric in metrics_to_monitor:
             print("{0} : {1:.4f}".format(metric, metrics_to_monitor[metric]))
@@ -338,6 +315,7 @@ def main_cli(flags: TrainConfig):
 
     # get regression loss function 
     regression_loss = fetch_loss_function(flags.loss.regression_loss_function,
+            label_transforms='log-transform', scale_parameter=0.2, 
             **flags.loss.regression_loss_parameters)
 
     # get autoencoder loss function

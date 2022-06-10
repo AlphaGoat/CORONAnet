@@ -193,7 +193,7 @@ def add_recurrent_regression_head(feature_extractor, num_outputs=1,
     )
 
     # distribute feature extractor across entire sequence
-    feature_extractor_outputs = list()
+    feature_extractor_outputs = []
     for i, out in enumerate(feature_extractor.outputs):
         feature_extractor_out = TimeDistributed(
             Model(feature_extractor.input, out),
@@ -207,9 +207,10 @@ def add_recurrent_regression_head(feature_extractor, num_outputs=1,
     drop6_1 = Dropout(0.3, name='drop6_1')(lstm6_1)
     
     #Flatten  output
-    outputs = list()
+    outputs = []
     flatten6_1 = Flatten()(drop6_1)
     dense6_1 = Dense(128, name='dense6_1', activation=LeakyReLU(alpha=0.2))(flatten6_1)
+#    dense6_2 = Dense(64, name='dense6_2', activation=LeakyReLU(alpha=0.2))(dense6_1)
     out = Dense(num_outputs, name='regression_output')(dense6_1)
     outputs.append(out)
 
@@ -224,7 +225,39 @@ def add_recurrent_regression_head(feature_extractor, num_outputs=1,
     return model
 
 
-def freeze_feature_extractor(model, freeze_lstm=True):
+def add_calibration_layers(model, num_outputs=1):
+    """
+    Adds calibration function to end of regression model
+    """
+    # Get the time distributed feature extractor model
+    feature_extractor = model.get_layer('time_distributed_model_0')
+    
+    # Freeze LSTM and regression heads
+    for layer in model.layers:
+        if layer.trainable == True:
+            layer.trainable = False
+
+    # Add calibration layers feature extractor
+    lstm7_1 = ConvLSTM2D(512, kernel_size=3, padding='same',
+                         name='calibration_lstm7_1')(feature_extractor.outputs[0])
+    drop7_1 = Dropout(0.3, name='drop7_1')(lstm7_1)
+
+    # Flatten output
+    flatten7_1 = Flatten()(drop7_1)
+    dense7_1 = Dense(128, name='dense7_1', activation=LeakyReLU(alpha=0.2))(flatten7_1)
+#    dense7_2 = Dense(64, name='dense7_2', activation=LeakyReLU(alpha=0.2))(dense7_1)
+    sigma = Dense(num_outputs, name='calibration_sigma')(dense7_1)
+
+    # Adjust scores from calibration layer with the learned sigma value
+    scores = model.outputs 
+
+    calibrated_scores = sigma * scores
+
+    # return calibrated model
+    return Model(inputs=model.inputs, outputs=calibrated_scores)
+
+
+def freeze_feature_extractor(model, freeze_lstm=False):
     """
     Freeze weights of feature extractor portion of model 
     """

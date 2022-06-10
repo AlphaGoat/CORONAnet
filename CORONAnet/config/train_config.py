@@ -19,6 +19,7 @@ class LossConfig:
     # Loss function to use for autoencoder branch, if applicable
     autoencoder_loss_function: str = 'mean-squared-error'
 
+    # Loss function to use for second stage of training
     second_stage_loss_function: str = 'mean-squared-error'
     
     # Weight for autoencoder loss (if applicable)
