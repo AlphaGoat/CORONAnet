@@ -344,7 +344,7 @@ def main_cli(flags: TrainConfig):
     # Prepare second stage of training by freezing weights of feature extractor 
     # and reinitializing weights in regression head
     freeze_feature_extractor(model)
-    reset_regression_head_weights(model)
+    reset_regression_head_weights(model, reset_lstm_weights=True)
 
     # initialize oversampled training data generator (for second stage of training)
     oversampled_train_data_generator = DatasetGenerator(

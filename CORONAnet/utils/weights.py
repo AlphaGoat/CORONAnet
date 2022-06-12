@@ -89,6 +89,23 @@ def reset_layer_weights(layer):
         ])
 
 
+def reset_lstm_layer_weights(lstm_layer):
+    """
+    Reset weights for LSTM layer
+    """
+    if hasattr(lstm_layer, 'kernel_initializer') and \
+            hasattr(lstm_layer, 'bias_initializer'):
+        weight_initializer = lstm_layer.kernel_initializer
+        bias_initializer = lstm_layer.bias_initializer
+
+    old_weights1, old_weights2, old_biases = lstm_layer.get_weights()
+
+    lstm_layer.set_weights([
+        weight_initializer(shape=old_weights1.shape),
+        weight_initializer(shape=old_weights2.shape),
+        bias_initializer(shape=len(old_biases)),
+    ])
+
 def freeze_layer_weights(layer):
     if hasattr(layer, 'trainable'):
         layer.trainable = False

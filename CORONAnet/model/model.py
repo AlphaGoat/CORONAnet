@@ -20,8 +20,8 @@ from tensorflow.keras.layers import (
         BatchNormalization,
 )
 from tensorflow.keras.models import Model
-from CORONAnet.utils import reset_layer_weights
 from CORONAnet.model.activations import LeakyReLU
+from CORONAnet.utils import reset_layer_weights, reset_lstm_layer_weights
 
 
 def VGG16(input_shape):
@@ -271,13 +271,14 @@ def freeze_feature_extractor(model, freeze_lstm=False):
     return model
 
 
-def reset_regression_head_weights(model):
+def reset_regression_head_weights(model, reset_lstm_weights=True):
     """
     Reset weights of regression head 
     """
     reset_layer_weights(model.get_layer('dense6_1'))
     reset_layer_weights(model.get_layer('regression_output'))
-#    reset_layer_weights(model.get_layer('lstm6_1'))
+    if reset_lstm_weights:
+        reset_lstm_layer_weights(model.get_layer('lstm6_1'))
 
 
 def fetch_model(image_shape, model_descriptor, num_targets=1):
