@@ -119,7 +119,10 @@ def train(
     def train_on_batch(X, y_true):
         with tf.GradientTape() as tape:
             y_pred = model(X, training=True)
-            reg_loss_value = regression_loss_function(y_true, y_pred)
+            print_op = tf.print("pred y: ", y_pred, 
+            output_stream="file:///home/alphagoat/Projects/CORONAnet/run.log")
+            with tf.control_dependencies([print_op]):
+                reg_loss_value = regression_loss_function(y_true, y_pred)
             loss_value = regression_loss_scale * reg_loss_value
             if use_autoencoder:
                 auto_loss_value = autoencoder_loss_function(X, y_pred)
@@ -134,13 +137,7 @@ def train(
     @tf.function
     def valid_on_batch(X, y_true):
         y_pred = model(X, training=False)
-        reg_loss_value = regression_loss_function(y_true, y_pred)
-        loss_value = regression_loss_scale * reg_loss_value
-        if use_autoencoder:
-            auto_loss_value = autoencoder_loss_function(X, y_pred)
-            loss_value += autoencoder_loss_scale * auto_loss_value
-        
-        return loss_value, y_pred
+        return y_pred
 
     for epoch in range(num_train_epochs):
         print(f"\nepoch {epoch} / {num_train_epochs + 1}")
@@ -151,9 +148,9 @@ def train(
 
         # begin training loop
         epoch_train_targets = []
-        for step, (images, targets) in enumerate(train_dataset):
+        for step, (train_image_data, targets) in enumerate(train_dataset):
 
-            batch_loss = train_on_batch(images, targets)
+            batch_loss = train_on_batch(train_image_data, targets)
             
             epoch_train_total_loss += batch_loss.numpy()
             count += 1
@@ -167,11 +164,17 @@ def train(
 
         # perform validation loop
         val_count = 0
-        epoch_val_total_loss = 0., 0., 0.
+        epoch_val_total_loss = 0.
         epoch_val_preds, epoch_val_targets = [], []
-        for step, (image_data, val_targets) in enumerate(valid_dataset):
+        for step, (val_image_data, val_targets) in enumerate(valid_dataset):
 
-            batch_valid_loss, val_preds = model(image_data, training=False)
+            val_preds = valid_on_batch(val_image_data, val_targets)
+
+            reg_loss_value = regression_loss_function(val_targets, val_preds)
+            batch_valid_loss = regression_loss_scale * reg_loss_value
+            if use_autoencoder:
+                auto_loss_value = autoencoder_loss_function(val_image_data, val_preds)
+                batch_valid_loss += autoencoder_loss_scale * auto_loss_value
 
             val_count += 1
             epoch_val_total_loss += batch_valid_loss.numpy()
@@ -225,8 +228,7 @@ def train(
             metrics_to_monitor[f'{label} mae'] = regression_df[f'{label} (SEP) mean absolute error'].iloc[0]
 
 
-        print("\n\nval_regression_loss: {:7.2f}, total_val_loss:{:7.2f}".
-            format(epoch_val_total_loss / val_count))
+        print("\n\total_val_loss:{:7.2f}".format(epoch_val_total_loss / val_count))
 
         for metric in metrics_to_monitor:
             print("{0} : {1:.4f}".format(metric, metrics_to_monitor[metric]))
