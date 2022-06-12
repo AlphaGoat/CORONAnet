@@ -119,10 +119,7 @@ def train(
     def train_on_batch(X, y_true):
         with tf.GradientTape() as tape:
             y_pred = model(X, training=True)
-            print_op = tf.print("pred y: ", y_pred, 
-            output_stream="file:///home/alphagoat/Projects/CORONAnet/run.log")
-            with tf.control_dependencies([print_op]):
-                reg_loss_value = regression_loss_function(y_true, y_pred)
+            reg_loss_value = regression_loss_function(y_true, y_pred)
             loss_value = regression_loss_scale * reg_loss_value
             if use_autoencoder:
                 auto_loss_value = autoencoder_loss_function(X, y_pred)
