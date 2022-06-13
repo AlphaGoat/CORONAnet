@@ -23,6 +23,7 @@ class GeneralizedReweightedLoss():
         event_distribution: List[float],
         scale_parameter: float=0.5,
         label_transforms: Union[List[str], Dict[str, str], str]='log-transform',
+        loss_weight: float=1.0,
     ):
         """
         :param base_loss_fn: Base loss function
@@ -38,6 +39,7 @@ class GeneralizedReweightedLoss():
         self.event_distribution = event_distribution
         self.scale_parameter = scale_parameter
         self.label_transforms = label_transforms
+        self.loss_weight = loss_weight
         self.calculate_weights()
 
     def calculate_weights(self):
@@ -83,7 +85,7 @@ class GeneralizedReweightedLoss():
 
             weighted_loss += self.weights[i] * bin_loss
 
-        return tf.reduce_mean(tf.reduce_sum(weighted_loss, axis=-1))
+        return self.loss_weight * tf.reduce_mean(tf.reduce_sum(weighted_loss, axis=-1))
 
 
 def huber_loss(
