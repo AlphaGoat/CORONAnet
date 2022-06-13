@@ -101,6 +101,10 @@ def huber_loss(
     return tf.reduce_mean(tf.reduce_sum(loss, axis=-1))
 
 
+def mean_squared_error(y_true, y_pred, loss_weight=1.0):
+    return loss_weight * tf.keras.losses.MeanSquaredError()
+
+
 def fetch_loss_function(loss_name, **kwargs):
     """
     Grab loss function specified (with additional parameters 
@@ -110,7 +114,7 @@ def fetch_loss_function(loss_name, **kwargs):
     if loss_name is None:
         return None
     elif loss_name == 'mean-squared-error':
-        return tf.keras.losses.MeanSquaredError()
+        return lambda y1, y2: kwargs.get('loss_weight', 1.0) * tf.keras.losses.MeanSquaredError()(y1, y2)
     elif loss_name == 'mean-absolute-error':
         return tf.keras.losses.MeanAbsoluteError()
     elif loss_name == 'huber-loss':
