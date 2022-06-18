@@ -236,7 +236,7 @@ def train(
 
         # if this is the best checkpoint thus far, save as well
         if best_checkpoint_savepath is not None:
-            if epoch_val_total_loss < best_val_loss or best_val_loss == -1.:
+            if epoch_val_total_loss <= best_val_loss or best_val_loss == -1.:
                 best_val_loss = epoch_val_total_loss
                 model.save_weights(best_checkpoint_savepath)
 
