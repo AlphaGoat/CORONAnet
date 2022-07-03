@@ -272,8 +272,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--analysis_root_directory', type=str,
-                        default=None, help="Root directory to start search for tfrecords log files")
+    parser.add_argument('analysis_root_directory', type=str,
+                        help="Root directory to start search for tfrecords log files")
 
     flags = parser.parse_args()
 

@@ -77,6 +77,17 @@ def single_frame_parse_function(example_proto, return_filename=False):
         return image, label
 
 
+def multi_frame_class_parse_function(
+    example_proto: tf.train.Example,
+    resize_dims: Tuple[int, int] or List[int]=None,
+    target_labels: str or List[str] or Dict[str, tf.dtype]=[],
+    target_transforms: str or Dict[str, str] or List[str]=None,
+    max_len_sequence: int=20
+):
+    pass
+                                    
+
+
 def multi_frame_parse_function(example_proto: tf.train.Example, 
                                resize_dims: Tuple[int] or List[int]=None,
                                target_labels: str or Tuple[str] or List[str] or Dict[str, tf.dtype]=[], 

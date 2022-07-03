@@ -33,6 +33,7 @@ from CORONAnet.analytics.prepare_eval_dataframes import (
     convert_labels_to_df,
     compute_regression_df,
     compute_classification_df, 
+    compute_categorized_regression_df,
 )
 from CORONAnet.analytics.plots import prediction_plot_handler
 from CORONAnet.dataset.DatasetGenerator import DatasetGenerator
@@ -192,12 +193,26 @@ def train(
                                                       target_labels=target_labels,
                                                       event_threshold=event_threshold,
                                                       target_transform=target_transforms)
-        regression_df = compute_regression_df(epoch_val_targets_df, 
-                                              epoch_val_preds_df,
-                                              target_labels=target_labels,
-                                              sep_threshold=event_threshold,
-                                              elevated_intensity_threshold=elevated_intensity_threshold,
-                                              target_transform=target_transforms)
+
+        if 'peak_intensity' in target_labels:
+            regression_df = compute_categorized_regression_df(
+                epoch_val_targets_df, 
+                epoch_val_preds_df,
+                target_labels=target_labels,
+                sep_threshold=event_threshold,
+                elevated_intensity_threshold=elevated_intensity_threshold,
+                target_transform=target_transforms
+            )
+        else:
+            regression_df = compute_regression_df(
+                epoch_val_targets_df, 
+                epoch_val_preds_df,
+                target_labels=target_labels,
+                sep_threshold=event_threshold,
+                elevated_intensity_threshold=elevated_intensity_threshold,
+                target_transform=target_transforms
+            )
+
         prediction_plots_dict = prediction_plot_handler(epoch_val_targets_df, 
                                                         epoch_val_preds_df,
                                                         target_labels=target_labels,
@@ -215,14 +230,19 @@ def train(
         plt.close("all")
 
         metrics_to_monitor = dict()
-        metrics_to_monitor["F1 Score"] = classification_df['f1'].iloc[0]
-        metrics_to_monitor["precision"] = classification_df['precision'].iloc[0]
-        metrics_to_monitor["recall"] = classification_df['recall'].iloc[0]
-        metrics_to_monitor['TSS'] = classification_df['tss'].iloc[0]
-        metrics_to_monitor['HSS'] = classification_df['hss'].iloc[0]
+        if classification_df is not None:
+            metrics_to_monitor["F1 Score"] = classification_df['f1'].iloc[0]
+            metrics_to_monitor["precision"] = classification_df['precision'].iloc[0]
+            metrics_to_monitor["recall"] = classification_df['recall'].iloc[0]
+            metrics_to_monitor['TSS'] = classification_df['tss'].iloc[0]
+            metrics_to_monitor['HSS'] = classification_df['hss'].iloc[0]
 
         for label in target_labels:
-            metrics_to_monitor[f'{label} mae'] = regression_df[f'{label} (SEP) mean absolute error'].iloc[0]
+            display_label = label.replace('_', ' ').title()
+            if 'peak_intensity' in target_labels:
+                metrics_to_monitor[f'{display_label} MAE'] = regression_df[f'{label} (SEP) mean absolute error'].iloc[0]
+            else:
+                metrics_to_monitor[f'{display_label} MAE']
 
 
         print("\n\total_val_loss:{:7.2f}".format(epoch_val_total_loss / val_count))

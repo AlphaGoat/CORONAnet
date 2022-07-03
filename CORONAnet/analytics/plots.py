@@ -38,23 +38,37 @@ def prediction_plot_handler(
 
     prediction_plots_dict = dict()
     for i, label in enumerate(target_labels):
-        true_target_vector = y_true_df[label]
-        pred_target_vector = y_pred_df[label]
 
         fig = plt.figure(i)
-        fig = generate_prediction_plot(true_target_vector, pred_target_vector,
-                                       target_transform=_get_transform(label),
-                                       sep_threshold=sep_threshold,
-                                       elevated_intensity_threshold=elevated_intensity_threshold)
+        if 'peak_intensity' in y_true_df.columns and 'peak_intensity' in y_pred_df.columns:
+            fig = generate_categorized_prediction_plot(
+                y_true_df, 
+                y_pred_df,
+                target_label=label,
+                target_transform=_get_transform(label),
+                sep_threshold=sep_threshold,
+                elevated_intensity_threshold=elevated_intensity_threshold,
+                fig=fig,
+            )
+        else:
+            true_target_vector = y_true_df[label]
+            pred_target_vector = y_pred_df[label]
+            fig = generate_prediction_plot(
+                true_target_vector,
+                pred_target_vector,
+                target_label=label,
+                target_transform=_get_transform(label),
+                fig=fig
+            )
 
         prediction_plots_dict[label + "_prediction_plot"] = fig
 
     return prediction_plots_dict
 
 
-def generate_prediction_plot(
-    y_true: np.ndarray, 
-    y_pred: np.ndarray, 
+def generate_categorized_prediction_plot(
+    y_true_df: pd.DataFrame, 
+    y_pred_df: pd.DataFrame, 
     target_label: str='peak_intensity',
     target_transform: str='log-transform', 
     sep_threshold: float=10.0,
@@ -80,6 +94,9 @@ def generate_prediction_plot(
     Returns:
         :fig: plot of predictions
     """
+    y_true = y_true_df[target_label]
+    y_pred = y_pred_df[target_label]
+
     # reverse transform and apploy log to predictions and targets unless they are already
     # in log scale
     if target_transform != 'log-transform':
@@ -93,8 +110,8 @@ def generate_prediction_plot(
     log_elevated_threshold = np.log(elevated_intensity_threshold)
 
     # separate sep events and elevated intensity events
-    sep_mask = y_true >= log_sep_threshold
-    elevated_mask = (log_sep_threshold > y_true) & (y_true > log_elevated_threshold)
+    sep_mask = y_true_df['peak_intensity'] >= log_sep_threshold
+    elevated_mask = (log_sep_threshold > y_true_df['peak_intensity']) & (y_true['peak_intensity'] > log_elevated_threshold)
 
     sep_true = y_true[sep_mask]
     sep_pred = y_pred[sep_mask]
@@ -139,8 +156,64 @@ def generate_prediction_plot(
     ]
     ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
 
-    plt.xlabel(f"Observed Proton Log {''.join(list(map(lambda x: x.capitalize(), target_label.split('_'))))}") 
-    plt.ylabel("Predicted Proton Log {''.join(list(map(lambda x: x.capitalize(), target_label.split('_'))))}")
+    plt.xlabel(f"Observed Proton Log {''.join(list(map(lambda x: x.title(), target_label.split('_'))))}") 
+    plt.ylabel("Predicted Proton Log {''.join(list(map(lambda x: x.title(), target_label.split('_'))))}")
+
+    return fig
+
+
+def generate_prediction_plot(
+    y_true: np.ndarray, 
+    y_pred: np.ndarray, 
+    target_label: str='peak_intensity',
+    target_transform: str='log-transform', 
+    fig: plt.Figure=None, 
+    **kwargs
+):
+    """
+    Generate intensity prediction plots with predicted intensity as x-axis and
+    true intensity as y-axis (in log-scale)
+
+    Args:
+        :y_true: array of true target values
+        :y_pred: array of predicted target values
+        :target_label: label of target we would like to plot
+        :target_transform: transform that was applied to target during training (if the
+         transform was anything but a log transform, we will need to reverse the transform
+         and apply a log transform for plotting
+        :sep_threshold: Threshold to use to distinguish SEP events from non-SEP events, in pfu
+        :elevated_intensity_threshold: Threshold to distinguish elevated intensity events from
+         non-elevated intensity protonh events, in pfu
+
+    Returns:
+        :fig: plot of predictions
+    """
+    # reverse transform and apploy log to predictions and targets unless they are already
+    # in log scale
+    if target_transform != 'log-transform':
+        y_true = reverse_transform(y_true, transform_method=target_transform, **kwargs)
+        y_pred = reverse_transform(y_pred, transform_method=target_transform, **kwargs)
+
+        y_true = np.log(y_true)
+        y_pred = np.log(y_pred)
+
+
+    # plot predictions
+    if fig is None:
+        fig = plt.figure()
+
+    ax = plt.subplot(111)
+    ax.scatter(y_true, y_pred, color='blue')
+
+    # plot line of equality 
+    lims = [
+            np.min([ax.get_xlim(), ax.get_ylim()]),
+            np.max([ax.get_xlim(), ax.get_ylim()]),
+    ]
+    ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
+
+    plt.xlabel(f"Observed Log {''.join(list(map(lambda x: x.title(), target_label.split('_'))))}") 
+    plt.ylabel("Predicted Log {''.join(list(map(lambda x: x.title(), target_label.split('_'))))}")
 
     return fig
 

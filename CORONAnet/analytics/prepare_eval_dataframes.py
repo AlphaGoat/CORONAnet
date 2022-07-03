@@ -60,6 +60,10 @@ def compute_classification_df(
     Returns:
         :classification_table_df: Dataframe containing classification metrics
     """
+    # Ensure that peak_intensity is one of the labels. If not, return None
+    if 'peak_intensity' not in y_true_df.columns or 'peak_intensity' not in y_pred_df.columns:
+        return None
+
     # Extract intensity vectors from true and predicted labels
     true_intensity_vector = y_true_df['peak_intensity'].to_numpy(np.float32)
     pred_intensity_vector = y_pred_df['peak_intensity'].to_numpy(np.float32)
@@ -104,6 +108,37 @@ def compute_classification_df(
 
 
 def compute_regression_df(
+    y_true_df: pd.DataFrame,
+    y_pred_df: pd.DataFrame,
+    target_labels: ["donki_speed"],
+    target_transform: str or List[str] or Dict[str, str]=None,
+    **kwargs,
+):
+    # if transform was applied, reverse transform for all prediction and target values
+    y_true_df = reverse_transform(y_true_df, transform_method=target_transform, **kwargs)
+    y_pred_df = reverse_transform(y_pred_df, transform_method=target_transform, **kwargs)
+
+    # compute metrics for each regression target
+    regression_table_data = dict()
+    for label in target_labels:
+        mae = mean_absolute_error(y_true_df[label], y_pred_df[label])
+        stddev = stddev_absolute_error(y_true_df[label], y_pred_df[label])
+
+        # calculate pearson correlation between actual and predicted SEP intensities
+        pearson = pearson_coefficient(y_true_df[label], y_pred_df[label])
+
+        # Generate table with regression statistics
+        label = label.replace('_', ' ').title()
+        regression_table_data[f"{label} mean absolute error"] = [mae]
+        regression_table_data[f"{label} absolute error"] = [stddev]
+        regression_table_data[f"{label} Pearson Coefficient"] = [pearson]
+
+    regression_table_df = pd.DataFrame.from_dict(regression_table_data)
+
+    return regression_table_df
+
+
+def compute_categorized_regression_df(
     y_true_df: pd.DataFrame, 
     y_pred_df: pd.DataFrame, 
     target_labels: ["peak_intensity"],
