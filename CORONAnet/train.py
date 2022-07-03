@@ -138,7 +138,7 @@ def train(
         return y_pred
 
     for epoch in range(num_train_epochs):
-        print(f"\nepoch {epoch} / {num_train_epochs + 1}")
+        print(f"\nepoch {epoch + 1} / {num_train_epochs}")
 
         count = 0
         best_val_loss = -1.0
@@ -220,7 +220,8 @@ def train(
                                                         target_transform=target_transforms)
 
         # write validation metrics to log
-        logger.write_data_to_log(classification_df, step=epoch)
+        if classification_df is not None:
+            logger.write_data_to_log(classification_df, step=epoch)
         logger.write_data_to_log(regression_df, step=epoch)
         logger.write_data_to_log(prediction_plots_dict, step=epoch)
         logger.write_data_to_log(epoch_val_total_loss / val_count, 
@@ -242,7 +243,8 @@ def train(
             if 'peak_intensity' in target_labels:
                 metrics_to_monitor[f'{display_label} MAE'] = regression_df[f'{label} (SEP) mean absolute error'].iloc[0]
             else:
-                metrics_to_monitor[f'{display_label} MAE']
+                metrics_to_monitor[f'{display_label} MAE'] = regression_df[f'{label} mean absolute error'].iloc[0]
+
 
 
         print("\n\total_val_loss:{:7.2f}".format(epoch_val_total_loss / val_count))
