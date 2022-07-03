@@ -128,7 +128,6 @@ def compute_regression_df(
         pearson = pearson_coefficient(y_true_df[label], y_pred_df[label])
 
         # Generate table with regression statistics
-        label = label.replace('_', ' ').title()
         regression_table_data[f"{label} mean absolute error"] = [mae]
         regression_table_data[f"{label} stddev absolute error"] = [stddev]
         regression_table_data[f"{label} Pearson Coefficient"] = [pearson]
