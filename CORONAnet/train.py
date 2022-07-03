@@ -238,6 +238,8 @@ def train(
             metrics_to_monitor['TSS'] = classification_df['tss'].iloc[0]
             metrics_to_monitor['HSS'] = classification_df['hss'].iloc[0]
 
+        print("regression_df: ", regression_df)
+        print("regression_df columns: ", regression_df.columns)
         for label in target_labels:
             display_label = label.replace('_', ' ').title()
             if 'peak_intensity' in target_labels:

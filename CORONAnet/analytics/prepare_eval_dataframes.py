@@ -130,7 +130,7 @@ def compute_regression_df(
         # Generate table with regression statistics
         label = label.replace('_', ' ').title()
         regression_table_data[f"{label} mean absolute error"] = [mae]
-        regression_table_data[f"{label} absolute error"] = [stddev]
+        regression_table_data[f"{label} stddev absolute error"] = [stddev]
         regression_table_data[f"{label} Pearson Coefficient"] = [pearson]
 
     regression_table_df = pd.DataFrame.from_dict(regression_table_data)
