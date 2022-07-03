@@ -105,6 +105,10 @@ def mean_squared_error(y_true, y_pred, loss_weight=1.0):
     return loss_weight * tf.keras.losses.MeanSquaredError()
 
 
+def custom_mean_squared_error(y_true, y_pred):
+    return tf.keras.backend.mean(tf.keras.backend.square(y_pred - y_true))
+
+
 def fetch_loss_function(loss_name, **kwargs):
     """
     Grab loss function specified (with additional parameters 
@@ -115,6 +119,8 @@ def fetch_loss_function(loss_name, **kwargs):
         return None
     elif loss_name == 'mean-squared-error':
         return lambda y1, y2: kwargs.get('loss_weight', 1.0) * tf.keras.losses.MeanSquaredError()(y1, y2)
+    elif loss_name == 'custom-mean-squared-error':
+        return lambda y1, y2: custom_mean_squared_error(y1, y2)
     elif loss_name == 'mean-absolute-error':
         return tf.keras.losses.MeanAbsoluteError()
     elif loss_name == 'huber-loss':
