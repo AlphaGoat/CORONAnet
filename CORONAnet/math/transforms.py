@@ -53,7 +53,42 @@ def apply_transform(y, transform_method=None, **kwargs):
     return y
 
 
-def reverse_transform(y, transform_method=None, **kwargs):
+def reverse_transform(
+    y, 
+    transform_method=None, 
+    target_transforms: Union[Dict[str, str], List[str], str]=None,
+    **kwargs,
+):
+    """
+    for y that has been projected into a different space by some transform,
+    apply reverse trasform and project back into original space 
+    """
+    """
+    wrapper for reverse transform that takes
+    multiple inputs
+    """
+    if target_transforms is None:
+        return y
+    elif isinstance(target_transforms, dict):
+        transformed_target_tensors = []
+        for i, key in enumerate(target_transforms.keys()):
+            transformed_y = apply_reverse_transform_tf(y[..., i], 
+                    transform_method=target_transforms[key])
+            transformed_target_tensors.append(transformed_y)
+        return tf.concat(transformed_target_tensors, axis=-1)
+    elif isinstance(target_transforms, list):
+        transformed_target_tensors = []
+        for i, transform in enumerate(target_transforms):
+            transformed_y = apply_reverse_transform_tf(y[..., i], 
+                    transform_method=transform)
+            transformed_target_tensors.append(transformed_y)
+        return tf.concat(transformed_target_tensors, axis=-1)
+    elif isinstance(target_transforms, str):
+        return apply_reverse_transform_tf(y, transform_method=target_transforms)
+    else:
+        raise TypeError(f"target_transforms is an unrecognized type {type(target_transforms)}")
+
+def apply_reverse_transform(y, transform_method=None, **kwargs):
     """
     for y that has been projected into a different space by some transform,
     apply reverse trasform and project back into original space 

@@ -156,8 +156,7 @@ class DatasetGenerator():
             return image, transformed_labels
 
         elif isinstance(self.target_transforms, list) or isinstance(self.target_transforms, tuple):
-            targets = tf.split(labels, num_or_size_of_splits=len(self.target_labels), axis=-1)
-            targets = tf.unstack(targets, axis=-1)
+            targets = tf.unstack(labels, axis=-1)
             transformed_targets = list()
             for target, transform in zip(targets, self.target_transforms):
                 target = apply_transform(target, transform)
@@ -167,7 +166,6 @@ class DatasetGenerator():
             return image, transformed_labels
 
         elif isinstance(self.target_transforms, dict):
-            targets = tf.split(labels, num_or_size_of_splits=len(self.target_labels), axis=-1)
             targets = tf.unstack(targets, axis=-1)
             transformed_targets = list()
             for target, label_name in zip(targets, self.target_labels):

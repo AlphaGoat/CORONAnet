@@ -308,8 +308,8 @@ def main_cli(flags: TrainConfig):
         batch_size=flags.batch_size,
         max_len_sequence=flags.max_len_sequence,
         buffer_size=flags.buffer_size,
-        target_labels=["peak_intensity"],
-        target_transforms="log-transform",
+        target_labels=["peak_intensity", "peak_intensity"],
+        target_transforms=["log-transform", "no-transform"],
     )
 
     # initialize validation data generator
@@ -320,13 +320,13 @@ def main_cli(flags: TrainConfig):
         batch_size=flags.batch_size,
         max_len_sequence=flags.max_len_sequence,
         buffer_size=flags.buffer_size,
-        target_labels=["peak_intensity"],
-        target_transforms="log-transform",
+        target_labels=["peak_intensity", "peak_intensity"],
+        target_transforms=["log-transform", "no-transform"],
     )
 
     # initialize model
     model = fetch_model(image_shape, flags.model_architecture,
-            sequence_length=flags.max_len_sequence, num_targets=1)
+            sequence_length=flags.max_len_sequence, num_targets=2)
 
     # if a checkpoint was provided, load model weights to resume training
     if flags.checkpoint_load_path is not None:
@@ -359,6 +359,8 @@ def main_cli(flags: TrainConfig):
         regression_loss_scale=flags.loss.regression_loss_scale,
         autoencoder_loss_scale=flags.loss.autoencoder_loss_scale,
         num_train_epochs=flags.num_representation_training_epochs,
+        target_labels=["peak_intensity", "peak_intensity"],
+        target_transforms=["log-transform", "no-transform"],
     )
 
     # Prepare second stage of training by freezing weights of feature extractor 

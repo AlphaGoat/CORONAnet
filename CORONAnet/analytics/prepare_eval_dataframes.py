@@ -42,6 +42,7 @@ def convert_labels_to_df(
 def compute_classification_df(
     y_true_df: pd.DataFrame, 
     y_pred_df: pd.DataFrame, 
+    target_labels: List[str]=["peak_intensity"],
     target_transform: str=None, 
     sep_threshold: float=10.0, 
     **kwargs
@@ -61,8 +62,17 @@ def compute_classification_df(
         :classification_table_df: Dataframe containing classification metrics
     """
     # Ensure that peak_intensity is one of the labels. If not, return None
-    if 'peak_intensity' not in y_true_df.columns or 'peak_intensity' not in y_pred_df.columns:
+    if 'peak_intensity' not in target_labels or 'peak_intensity' not in target_labels:
         return None
+
+    def _get_transform(label):
+        if isinstance(target_transform, str):
+            return target_transform 
+        elif isinstance(target_transform, list):
+            idx = target_labels.index(label)
+            return target_transform[idx]
+        elif isinstance(target_transform, dict):
+            return target_transform[label]
 
     # Extract intensity vectors from true and predicted labels
     true_intensity_vector = y_true_df['peak_intensity'].to_numpy(np.float32)
@@ -70,10 +80,10 @@ def compute_classification_df(
 
     # if transform was applied, reverse transform for all prediction and target values
     true_intensity_vector = reverse_transform(true_intensity_vector, 
-                                              transform_method=target_transform, 
+                                              transform_method=_get_transform('peak_intensity'), 
                                               **kwargs)
     pred_intensity_vector = reverse_transform(pred_intensity_vector, 
-                                              transform_method=target_transform, 
+                                              transform_method=_get_transform('peak_intensity'), 
                                               **kwargs)
 
     # generate classification statistics
@@ -115,12 +125,24 @@ def compute_regression_df(
     **kwargs,
 ):
     # if transform was applied, reverse transform for all prediction and target values
-    y_true_df = reverse_transform(y_true_df, transform_method=target_transform, **kwargs)
-    y_pred_df = reverse_transform(y_pred_df, transform_method=target_transform, **kwargs)
+    def _get_transform(label):
+        if isinstance(target_transform, str):
+            return target_transform 
+        elif isinstance(target_transform, list):
+            idx = target_labels.index(label)
+            return target_transform[idx]
+        elif isinstance(target_transform, dict):
+            return target_transform[label]
 
     # compute metrics for each regression target
     regression_table_data = dict()
     for label in target_labels:
+        y_true = y_true_df[label].to_numpy(np.float32)
+        y_pred = y_pred_df[label].to_numpy(np.float32)
+
+        y_true = reverse_transform(y_true, transform_method=_get_transform(label))
+        y_pred = reverse_transform(y_pred, transform_method=_get_transform(label))
+
         mae = mean_absolute_error(y_true_df[label], y_pred_df[label])
         stddev = stddev_absolute_error(y_true_df[label], y_pred_df[label])
 
