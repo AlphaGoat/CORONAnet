@@ -41,6 +41,10 @@ def apply_transform(y, transform_method=None, **kwargs):
         y = exp_transform(y, **kwargs)
     elif transform_method == 'boxcox-transform':
         y = boxcox_transform(y, **kwargs)
+    elif transform_method == 'longitude-transform':
+        return (y + 180.0) / 360.0
+    elif transform_method == 'latitude-transform':
+        return (y + 90.0) / 180.0
     elif transform_method == 'no-transform' or transform_method is None:
         pass
     else:
@@ -58,6 +62,10 @@ def reverse_transform(y, transform_method=None, **kwargs):
         return np.exp(y)
     elif transform_method == 'no-transform' or transform_method is None:
         return y 
+    elif transform_method == 'longitude-transform':
+        return (y * 360.0) - 180.0
+    elif transform_method == 'latitude-transform':
+        return (y * 180.0) - 90.0
     else:
         raise NotImplementedError(f"Transform type {transform_method} not implemented")
 
@@ -100,5 +108,9 @@ def apply_reverse_transform_tf(
         return tf.exp(y)
     elif transform_method == 'no-transform' or transform_method is None:
         return y
+    elif transform_method == 'longitude-transform':
+        return (y * 360.0) - 180.0
+    elif transform_method == 'latitude-transform':
+        return (y * 180.0) - 90.0
     else:
         raise NotImplementedError(f"Transform type {transform_method} not implemented")
