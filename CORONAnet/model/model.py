@@ -13,15 +13,162 @@ from tensorflow.keras.layers import (
         Conv2D, 
         Dropout,
         Flatten,
+        Reshape,
         ConvLSTM2D,
         UpSampling2D,
         MaxPooling2D,
+        MaxPooling3D,
         TimeDistributed,
         BatchNormalization,
 )
 from tensorflow.keras.models import Model
 from CORONAnet.model.activations import LeakyReLU
 from CORONAnet.utils import reset_layer_weights, reset_lstm_layer_weights
+
+
+def ConvolutionalRNN(input_shape):
+
+    # first input model
+    visible = Input(shape=input_shape, name='input')
+
+    # 1st-block 
+    conv1_1 = Conv2D(64, kernel_size=3, padding='same', name='conv1_1')(visible)
+    conv1_1 = BatchNormalization(axis=1)(conv1_1)
+    conv1_1 = LeakyReLU(alpha=0.2)(conv1_1)
+    conv1_2 = Conv2D(64, kernel_size=3, padding='same', name='conv1_2')(conv1_1)
+    conv1_2 = BatchNormalization(axis=1)(conv1_2)
+    conv1_2 = LeakyReLU(alpha=0.2)(conv1_2)
+    pool1_1 = MaxPooling2D(pool_size=(2, 2), name='pool1_1')(conv1_2)
+    drop1_1 = Dropout(0.3, name='drop1_1')(pool1_1)
+
+    # 2nd block
+    conv2_1 = Conv2D(128, kernel_size=3, padding='same', name='conv2_1')(drop1_1)
+    conv2_1 = BatchNormalization(axis=1)(conv2_1)
+    conv2_1 = LeakyReLU()(conv2_1)
+    conv2_2 = Conv2D(128, kernel_size=3, padding='same', name='conv2_2')(conv2_1)
+    conv2_2 = BatchNormalization(axis=1)(conv2_2)
+    conv2_2 = LeakyReLU(alpha=0.2)(conv2_2)
+    pool2_1 = MaxPooling2D(pool_size=(2, 2), name='pool2_1')(conv2_2)
+    drop2_1 = Dropout(0.3, name='drop2_1')(pool2_1)
+
+    # 3rd block
+    conv3_1 = Conv2D(256, kernel_size=3, padding='same', name='conv3_1')(drop2_1)
+    conv3_1 = BatchNormalization(axis=1)(conv3_1)
+    conv3_1 = LeakyReLU(alpha=0.2)(conv3_1)
+    conv3_2 = Conv2D(256, kernel_size=3, padding='same', name='conv3_2')(conv3_1)
+    conv3_2 = BatchNormalization(axis=1)(conv3_2)
+    conv3_2 = LeakyReLU(alpha=0.2)(conv3_2)
+    pool3_1 = MaxPooling2D(pool_size=(2, 2), name='pool3_1')(conv3_2)
+    drop3_1 = Dropout(0.3, name='drop3_1')(pool3_1)
+
+    bidirectional4_1 = Bidirectional(GRU(256, activation='tanh', dropout=0.3,
+        recurrent_dropout=0.3, return_sequences=True), merge_mode='concat')(drop3_1)
+    bidirectional4_2 = Bidirectional(GRU(128, activation='tanh', dropout=0.3,
+        recurrent_dropout=0.3, return_sequences=True), merge_mode='concat')(bidirectional4_1)
+
+    dense5_1 = TimeDistributed(Dense(128, activation=LeakyReLU(alpha=0.2)))(bidirectional4_2)
+    drop5_1 = Dropout(0.3, name='drop5_1')(dense5_1)
+    dense5_2 = TimeDistributed(Dense(64, activation=LeakyReLU(alpha=0.2)))(drop5_1)
+
+
+def BaseCNN(input_shape):
+    # first input model
+    visible = Input(shape=input_shape, name='input')
+
+    # 1st-block 
+    conv1_1 = Conv2D(64, kernel_size=3, padding='same', name='conv1_1')(visible)
+    conv1_1 = BatchNormalization(axis=1)(conv1_1)
+    conv1_1 = LeakyReLU(alpha=0.2)(conv1_1)
+    conv1_2 = Conv2D(64, kernel_size=3, padding='same', name='conv1_2')(conv1_1)
+    conv1_2 = BatchNormalization(axis=1)(conv1_2)
+    conv1_2 = LeakyReLU(alpha=0.2)(conv1_2)
+    pool1_1 = MaxPooling2D(pool_size=(2, 2), name='pool1_1')(conv1_2)
+    drop1_1 = Dropout(0.3, name='drop1_1')(pool1_1)
+
+    # 2nd block
+    conv2_1 = Conv2D(128, kernel_size=3, padding='same', name='conv2_1')(drop1_1)
+    conv2_1 = BatchNormalization(axis=1)(conv2_1)
+    conv2_1 = LeakyReLU()(conv2_1)
+    conv2_2 = Conv2D(128, kernel_size=3, padding='same', name='conv2_2')(conv2_1)
+    conv2_2 = BatchNormalization(axis=1)(conv2_2)
+    conv2_2 = LeakyReLU(alpha=0.2)(conv2_2)
+    pool2_1 = MaxPooling2D(pool_size=(2, 2), name='pool2_1')(conv2_2)
+    drop2_1 = Dropout(0.3, name='drop2_1')(pool2_1)
+
+    # 3rd block
+    conv3_1 = Conv2D(256, kernel_size=3, padding='same', name='conv3_1')(drop2_1)
+    conv3_1 = BatchNormalization(axis=1)(conv3_1)
+    conv3_1 = LeakyReLU(alpha=0.2)(conv3_1)
+    conv3_2 = Conv2D(256, kernel_size=3, padding='same', name='conv3_2')(conv3_1)
+    conv3_2 = BatchNormalization(axis=1)(conv3_2)
+    conv3_2 = LeakyReLU(alpha=0.2)(conv3_2)
+    pool3_1 = MaxPooling2D(pool_size=(2, 2), name='pool3_1')(conv3_2)
+    drop3_1 = Dropout(0.3, name='drop3_1')(pool3_1)
+
+    outputs = []
+    outputs.append(drop3_1)
+
+    # Create time distributed model
+    baseCNN = Model(inputs=visible, outputs=outputs)
+
+    return baseCNN
+
+
+def fullyRecurrentModel(input_shape, sequence_length=16, num_outputs=1):
+    """
+    Base CNN architecture implemented as fully recurrent model
+    """
+    # if the input shape does not have a channel dimension, add one
+    if len(input_shape) == 2:
+        input_shape = (*input_shape, 1)
+    visible = Input(shape=(sequence_length, *input_shape), name='input')
+
+    lstm1_1 = ConvLSTM2D(filters=32, kernel_size=(3, 3), padding='same',
+            recurrent_activation='hard_sigmoid', activation='tanh', 
+            return_sequences=True, name='lstm1_1')(visible)
+    lstm1_1 = BatchNormalization()(lstm1_1)
+    lstm1_2 = ConvLSTM2D(filters=32, kernel_size=(3, 3), padding='same',
+            recurrent_activation='hard_sigmoid', activation='tanh',
+            return_sequences=True, name='lstm1_2')(lstm1_1)
+    lstm1_2 = BatchNormalization()(lstm1_2)
+    pool1_1 = MaxPooling3D(pool_size=(1, 2, 2), padding='same', name='pool1_1')(lstm1_2)
+    dropout1_1 = Dropout(0.3, name='drop1_1')(pool1_1)
+
+    lstm2_1 = ConvLSTM2D(filters=64, kernel_size=(3, 3), padding='same',
+            recurrent_activation='hard_sigmoid', activation='tanh',
+            return_sequences=True, name='lstm2_1')(dropout1_1)
+    lstm2_1 = BatchNormalization()(lstm2_1)
+    lstm2_2 = ConvLSTM2D(filters=64, kernel_size=(3, 3), padding='same',
+            recurrent_activation='hard_sigmoid', activation='tanh',
+            return_sequences=True, name='lstm2_2')(lstm2_1)
+    lstm2_2 = BatchNormalization()(lstm2_2)
+    pool2_1 = MaxPooling3D(pool_size=(1, 2, 2), padding='same', name='pool2_1')(lstm2_2)
+    dropout2_1 = Dropout(0.3, name='drop2_1')(pool2_1)
+
+    lstm3_1 = ConvLSTM2D(filters=96, kernel_size=(3, 3), padding='same',
+            recurrent_activation='hard_sigmoid', activation='tanh',
+            return_sequences=True, name='lstm3_1')(dropout2_1)
+    lstm3_1 = BatchNormalization()(lstm3_1)
+    lstm3_2 = ConvLSTM2D(filters=96, kernel_size=(3, 3), padding='same',
+            recurrent_activation='hard_sigmoid', activation='tanh',
+            return_sequences=True, name='lstm3_2')(lstm3_1)
+    lstm3_2 = BatchNormalization()(lstm3_2)
+    pool3_1 = MaxPooling3D(pool_size=(1, 2, 2), padding='same', name='pool3_1')(lstm3_2)
+    dropout3_1 = Dropout(0.3, name='drop3_1')(pool3_1)
+
+    # Dense layer
+    dense4_1 = Dense(320, activation=LeakyReLU(alpha=0.2), name='dense4_1')(dropout3_1)
+    dropout4_1 = Dropout(0.3, name='drop4_1')(dense4_1)
+
+    # Final LSTM layer
+    reshape5_1 = Reshape((sequence_length, -1))(dropout4_1)
+    lstm5_1 = LSTM(64, return_sequences=False)(reshape5_1)
+    dropout5_1 = Dropout(0.3, name='drop5_1')(lstm5_1)
+
+    # Final output layer
+    out = Dense(num_outputs, name='output_layer')(dropout5_1)
+
+    return Model(inputs=visible, outputs=out)
 
 
 def VGG16(input_shape):
@@ -202,16 +349,23 @@ def add_recurrent_regression_head(feature_extractor, num_outputs=1,
         feature_extractor_outputs.append(feature_extractor_out)
 
     # Add LSTM layer and dropout
-    lstm6_1 = ConvLSTM2D(512, kernel_size=3, padding='same',
+    lstm6_1 = ConvLSTM2D(256, kernel_size=3, padding='same',
                         name='lstm6_1')(feature_extractor_outputs[0])
-    drop6_1 = Dropout(0.3, name='drop6_1')(lstm6_1)
-    
+    lstm6_2 = ConvLSTM2D(126, kernel_size=3, padding='same',
+                         name='lstm6_2')(lstm6_1)
+#    flattened_outputs = TimeDistributed(Flatten())(feature_extractor_outputs[0])
+#    lstm6_1 = LSTM(512, name='lstm6_1')(flattened_outputs)
+#    drop6_1 = Dropout(0.3, name='drop6_1')(lstm6_1)
+#    
+#    lstm6_2 = LSTM(256, name='lstm6_2')(drop6_1)
+#    drop6_2 = Dropout(0.3, name='drop6_2')(lstm6_2)
+
     #Flatten  output
     outputs = []
-    flatten6_1 = Flatten()(drop6_1)
-    dense6_1 = Dense(128, name='dense6_1', activation=LeakyReLU(alpha=0.2))(flatten6_1)
+#    flatten6_3 = Flatten()(drop6_2)
+    dense6_3 = Dense(128, name='dense6_3', activation=LeakyReLU(alpha=0.2))(drop6_2)
 #    dense6_2 = Dense(64, name='dense6_2', activation=LeakyReLU(alpha=0.2))(dense6_1)
-    out = Dense(num_outputs, name='regression_output')(dense6_1)
+    out = Dense(num_outputs, name='regression_output')(dense6_3)
     outputs.append(out)
 
     # if we are using an autoencoder branch, add the decoder outputs to the 
@@ -281,7 +435,8 @@ def reset_regression_head_weights(model, reset_lstm_weights=True):
         reset_lstm_layer_weights(model.get_layer('lstm6_1'))
 
 
-def fetch_model(image_shape, model_descriptor, num_targets=1):
+def fetch_model(image_shape, model_descriptor, num_targets=1,
+        sequence_length=16):
     """
     helper function that fetches appropriate model constructor
     based on the descriptor string passed in 
@@ -289,7 +444,11 @@ def fetch_model(image_shape, model_descriptor, num_targets=1):
     :param model_descriptor: (string) descriptor for which model 
     to import from library
     """
-    if model_descriptor == "VGG16":
+    if model_descriptor == 'base-CNN':
+        baseCNN = BaseCNN(image_shape)
+        return add_recurrent_regression_head(baseCNN, num_outputs=num_targets,
+                input_shape=image_shape)
+    elif model_descriptor == "VGG16":
         vgg16 = VGG16(image_shape)
         return add_recurrent_regression_head(vgg16, num_outputs=num_targets, 
                                              input_shape=image_shape)
@@ -305,6 +464,9 @@ def fetch_model(image_shape, model_descriptor, num_targets=1):
 
         return add_recurrent_regression_head(vgg16_AE, num_outputs=num_targets,
                                              input_shape=image_shape, autoencoder_branch=True)
+    elif model_descriptor == 'fully-recurrent':
+        return fullyRecurrentModel(image_shape, sequence_length=sequence_length,
+                num_outputs=num_targets)
     else:
         raise ValueError("Provided model descriptor '{}'".format(model_descriptor)
         + " does not match any model in current library")

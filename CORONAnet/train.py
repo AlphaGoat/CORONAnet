@@ -325,7 +325,8 @@ def main_cli(flags: TrainConfig):
     )
 
     # initialize model
-    model = fetch_model(image_shape, flags.model_architecture)
+    model = fetch_model(image_shape, flags.model_architecture,
+            sequence_length=flags.max_len_sequence, num_targets=1)
 
     # if a checkpoint was provided, load model weights to resume training
     if flags.checkpoint_load_path is not None:

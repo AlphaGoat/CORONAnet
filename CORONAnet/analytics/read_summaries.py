@@ -132,7 +132,7 @@ def save_serialized_plots(run_df,
                 save_all=True, duration=300, loop=0)
 
 
-def run_analysis(analysis_dir):
+def run_analysis(analysis_dir, target_labels=['donki_speed']):
 
     series_functions = [
         lambda x: temporal_series_from_logs(x, "f1_score"),
@@ -143,19 +143,22 @@ def run_analysis(analysis_dir):
         lambda x: temporal_series_from_logs(x, "true_positives"),
         lambda x: temporal_series_from_logs(x, "false_positives"),
         lambda x: temporal_series_from_logs(x, "true_negatives"),
-        lambda x: temporal_series_from_logs(x," false_negatives"),
+        lambda x: temporal_series_from_logs(x, "false_negatives"),
         lambda x: temporal_series_from_logs(x, "loss/total_loss"),
         lambda x: temporal_series_from_logs(x, "valid_loss/total_loss"),
     ]
 
     plots_functions = list()
-    for label in TARGET_LABELS:
+    for label in target_labels:
         series_functions.extend([
             lambda x: temporal_series_from_logs(x, label + " (SEP) mean absolute error"),
             lambda x: temporal_series_from_logs(x, label + " (Elevated) mean absolute error"),
             lambda x: temporal_series_from_logs(x, label + " (Combined) mean absolute error"),
+            lambda x: temporal_series_from_logs(x, label + " mean absolute error"),
             lambda x: temporal_series_from_logs(x, label + " Pearson Coefficient (SEP)"),
             lambda x: temporal_series_from_logs(x, label + " Pearson Coefficient (Non-Constant)"),
+            lambda x: temporal_series_from_logs(x, label + " Pearson Coefficient"),
+
         ])
         plots_functions.append(lambda x: plots_from_logs(x, label + "_prediction_plot"))
 
@@ -218,7 +221,7 @@ def run_analysis(analysis_dir):
         },
     ]
 
-    for label in TARGET_LABELS:
+    for label in target_labels:
         label_format = ' '.join(list(map(lambda s: s[0].upper() + s[1:], label.split('_'))))
         plot_functions.extend([
             {
@@ -237,6 +240,11 @@ def run_analysis(analysis_dir):
                 "name": label + "_combined_mean_absolute_error"
             },
             {
+                "function": lambda x: temporal_plot(x, label + " mean absolute error",
+                    title=label_format + " Mean Absolute Error"),
+                "name": label + "_mean_absolute_error"
+            },
+            {
                 "function": lambda x: temporal_plot(x, label + " Pearson Coefficient (SEP)",
                     title=label_format + " (SEP) Pearson Coefficient"),
                 "name": label + "_sep_pearson_coefficient"
@@ -245,7 +253,12 @@ def run_analysis(analysis_dir):
                 "function": lambda x: temporal_plot(x, label + " Pearson Coefficient (Non-Constant)",
                     title=label_format + " (Non-Constant) Pearson Coefficient"),
                 "name": label + "_non_constant_pearson_coefficient"
-            }
+            },
+            {
+                "function": lambda x: temporal_plot(x, label + " Pearson Coefficient",
+                    title=label_format + " Pearson Coefficient"),
+                "name": label + "_pearson_coefficient"
+            },
         ])
 
     # generate plots from scalars and save in graphics save directory
@@ -260,7 +273,7 @@ def run_analysis(analysis_dir):
                           run_plots_dict, 
                           graphics_save_dir, 
                           plot_keys, 
-                          "valid-loss/total_loss",
+                          "valid_loss/total_loss",
                           higher_score_is_better=False)
 
 
