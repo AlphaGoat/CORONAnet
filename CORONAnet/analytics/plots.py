@@ -191,8 +191,12 @@ def generate_prediction_plot(
     # reverse transform and apploy log to predictions and targets unless they are already
     # in log scale
     if target_transform != 'log-transform':
+        print("y_true before transform: ", y_true)
+        print("y_pred before transform: ", y_pred)
         y_true = reverse_transform(y_true, transform_method=target_transform, **kwargs)
         y_pred = reverse_transform(y_pred, transform_method=target_transform, **kwargs)
+        print("y_true after transform: ", y_true)
+        print("y_pred after transform: ", y_pred)
 
         if (target_transform != 'no-transform' or target_transform is not None
                 or target_transform != 'longitude-transform' or target_transform != 'latitude-transform'):
