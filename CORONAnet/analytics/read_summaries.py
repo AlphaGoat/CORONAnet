@@ -132,7 +132,7 @@ def save_serialized_plots(run_df,
                 save_all=True, duration=300, loop=0)
 
 
-def run_analysis(analysis_dir, target_labels=['donki_speed']):
+def run_analysis(analysis_dir):
 
     series_functions = [
         lambda x: temporal_series_from_logs(x, "f1_score"),
@@ -149,18 +149,18 @@ def run_analysis(analysis_dir, target_labels=['donki_speed']):
     ]
 
     plots_functions = list()
-    for label in target_labels:
+    for label in TARGET_LABELS:
         series_functions.extend([
-            lambda x: temporal_series_from_logs(x, label + " (SEP) mean absolute error"),
-            lambda x: temporal_series_from_logs(x, label + " (Elevated) mean absolute error"),
-            lambda x: temporal_series_from_logs(x, label + " (Combined) mean absolute error"),
-            lambda x: temporal_series_from_logs(x, label + " mean absolute error"),
-            lambda x: temporal_series_from_logs(x, label + " Pearson Coefficient (SEP)"),
-            lambda x: temporal_series_from_logs(x, label + " Pearson Coefficient (Non-Constant)"),
-            lambda x: temporal_series_from_logs(x, label + " Pearson Coefficient"),
+            lambda x, l=label: temporal_series_from_logs(x, l + " (SEP) mean absolute error"),
+            lambda x, l=label: temporal_series_from_logs(x, l + " (Elevated) mean absolute error"),
+            lambda x, l=label: temporal_series_from_logs(x, l + " (Combined) mean absolute error"),
+            lambda x, l=label: temporal_series_from_logs(x, l + " mean absolute error"),
+            lambda x, l=label: temporal_series_from_logs(x, l + " Pearson Coefficient (SEP)"),
+            lambda x, l=label: temporal_series_from_logs(x, l + " Pearson Coefficient (Non-Constant)"),
+            lambda x, l=label: temporal_series_from_logs(x, l + " Pearson Coefficient"),
 
         ])
-        plots_functions.append(lambda x: plots_from_logs(x, label + "_prediction_plot"))
+        plots_functions.append(lambda x, l=label: plots_from_logs(x, l + "_prediction_plot"))
 
     run_df, run_plots_dict = read_logs(analysis_dir, series_functions=series_functions,
                                        plots_functions=plots_functions)
@@ -221,42 +221,42 @@ def run_analysis(analysis_dir, target_labels=['donki_speed']):
         },
     ]
 
-    for label in target_labels:
+    for label in TARGET_LABELS:
         label_format = ' '.join(list(map(lambda s: s[0].upper() + s[1:], label.split('_'))))
         plot_functions.extend([
             {
-                "function": lambda x: temporal_plot(x, label + " (SEP) mean absolute error",
-                    title=label_format + " (SEP) Mean Absolute Error"),
+                "function": lambda x, l=label: temporal_plot(x, l + " (SEP) mean absolute error",
+                    title=l + " (SEP) Mean Absolute Error"),
                 "name": label + "_sep_mean_absolute_error"
             },
             {
-                "function": lambda x: temporal_plot(x, label + " (Elevated) mean absolute error",
-                    title=label_format + " (Elevated) Mean Absolute Error"),
+                "function": lambda x, l=label: temporal_plot(x, l + " (Elevated) mean absolute error",
+                    title=l + " (Elevated) Mean Absolute Error"),
                 "name": label + "_elevated_mean_absolute_error"
             },
             {
-                "function": lambda x: temporal_plot(x, label + " (Combined) mean absolute error",
-                    title=label_format + " (Combined) Mean Absolute Error"),
+                "function": lambda x, l=label: temporal_plot(x, l + " (Combined) mean absolute error",
+                    title=l + " (Combined) Mean Absolute Error"),
                 "name": label + "_combined_mean_absolute_error"
             },
             {
-                "function": lambda x: temporal_plot(x, label + " mean absolute error",
-                    title=label_format + " Mean Absolute Error"),
+                "function": lambda x, l=label: temporal_plot(x, l + " mean absolute error",
+                    title=l + " Mean Absolute Error"),
                 "name": label + "_mean_absolute_error"
             },
             {
-                "function": lambda x: temporal_plot(x, label + " Pearson Coefficient (SEP)",
-                    title=label_format + " (SEP) Pearson Coefficient"),
+                "function": lambda x, l=label: temporal_plot(x, l + " Pearson Coefficient (SEP)",
+                    title=l + " (SEP) Pearson Coefficient"),
                 "name": label + "_sep_pearson_coefficient"
             },
             {
-                "function": lambda x: temporal_plot(x, label + " Pearson Coefficient (Non-Constant)",
-                    title=label_format + " (Non-Constant) Pearson Coefficient"),
+                "function": lambda x, l=label: temporal_plot(x, l + " Pearson Coefficient (Non-Constant)",
+                    title=l + " (Non-Constant) Pearson Coefficient"),
                 "name": label + "_non_constant_pearson_coefficient"
             },
             {
-                "function": lambda x: temporal_plot(x, label + " Pearson Coefficient",
-                    title=label_format + " Pearson Coefficient"),
+                "function": lambda x, l=label: temporal_plot(x, l + " Pearson Coefficient",
+                    title=l + " Pearson Coefficient"),
                 "name": label + "_pearson_coefficient"
             },
         ])

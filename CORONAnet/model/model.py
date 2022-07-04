@@ -114,7 +114,7 @@ def BaseCNN(input_shape):
     return baseCNN
 
 
-def fullyRecurrentModel(input_shape, sequence_length=16, num_outputs=1):
+def fullyRecurrentModel(input_shape, sequence_length=16, num_outputs=1, apply_mask=True):
     """
     Base CNN architecture implemented as fully recurrent model
     """

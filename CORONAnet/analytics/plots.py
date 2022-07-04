@@ -194,8 +194,9 @@ def generate_prediction_plot(
         y_true = reverse_transform(y_true, transform_method=target_transform, **kwargs)
         y_pred = reverse_transform(y_pred, transform_method=target_transform, **kwargs)
 
-        y_true = np.log(y_true)
-        y_pred = np.log(y_pred)
+        if target_transform != 'no-transform' or target_transform is not None:
+            y_true = np.log(y_true)
+            y_pred = np.log(y_pred)
 
 
     # plot predictions
